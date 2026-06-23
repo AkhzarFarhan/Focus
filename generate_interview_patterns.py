@@ -1,0 +1,1056 @@
+#!/usr/bin/env python3
+"""Generate comprehensive coding interview patterns JSON for interview preparation."""
+import json
+import os
+
+def ch_arrays_hashing():
+    return {
+        "id": 1, "title": "Arrays & Hashing", "slug": "arrays-hashing",
+        "description": "Frequency counting, grouping, duplicate detection, and hash map patterns.",
+        "icon": "📊", "difficulty": "beginner",
+        "patternOverview": "Arrays and hash maps are the foundation of most coding problems. Hash maps provide O(1) average lookup, enabling us to trade space for time. Key patterns: frequency counting, two-sum lookup, grouping by key.",
+        "whenToUse": ["Need O(1) lookup/insert", "Counting occurrences", "Finding pairs/groups with specific properties", "Detecting duplicates"],
+        "patterns": [
+            {"id": "1.1", "name": "Hash Map Lookup", "description": "Use a hash map to store seen elements for O(1) lookup, converting O(n²) brute force to O(n).",
+             "intuition": "Instead of searching the entire array for a complement, store what you've seen in a map. When you encounter an element, check if its complement exists.",
+             "template": "unordered_map<int, int> seen;\nfor (int i = 0; i < n; i++) {\n    int complement = target - nums[i];\n    if (seen.count(complement))\n        return {seen[complement], i};\n    seen[nums[i]] = i;\n}",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(n)",
+             "identificationSignals": ["Find pair with target sum", "Check if complement exists", "Need index of matching element"],
+             "variations": ["Two Sum", "Two Sum II (sorted)", "3Sum", "4Sum"]},
+            {"id": "1.2", "name": "Frequency Counter", "description": "Count occurrences using hash map, then process counts.",
+             "intuition": "Many problems reduce to: count everything first, then answer queries on the counts. Hash map makes counting O(n).",
+             "template": "unordered_map<char, int> freq;\nfor (char c : s) freq[c]++;\n// Process frequencies",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(k) where k = unique elements",
+             "identificationSignals": ["Count occurrences", "Find most/least frequent", "Check if two strings are anagrams", "Find first non-repeating element"],
+             "variations": ["Valid Anagram", "Top K Frequent Elements", "First Unique Character"]},
+            {"id": "1.3", "name": "Group By Key", "description": "Group elements sharing a common property using hash map of lists.",
+             "intuition": "Transform each element into a canonical key, then group all elements with the same key together.",
+             "template": "unordered_map<string, vector<string>> groups;\nfor (auto& s : strs) {\n    string key = getKey(s);  // e.g., sorted string\n    groups[key].push_back(s);\n}",
+             "timeComplexity": "O(n * k) where k = key computation cost", "spaceComplexity": "O(n)",
+             "identificationSignals": ["Group similar elements", "Find all anagrams", "Categorize by property"],
+             "variations": ["Group Anagrams", "Group Shifted Strings"]}
+        ],
+        "problems": [
+            {"id": "p1.1", "title": "Two Sum", "difficulty": "easy", "source": "LeetCode #1",
+             "problemStatement": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. Each input has exactly one solution.",
+             "examples": [{"input": "nums = [2,7,11,15], target = 9", "output": "[0,1]", "explanation": "nums[0] + nums[1] = 2 + 7 = 9"}],
+             "constraints": ["2 <= nums.length <= 10^4", "Each input has exactly one solution"],
+             "hints": ["Can you find the complement in O(1)?", "Use a hash map to store values and indices"],
+             "bruteForce": {"approach": "Check all pairs with nested loops", "timeComplexity": "O(n²)", "spaceComplexity": "O(1)"},
+             "optimalSolution": {
+                 "approach": "One-pass hash map",
+                 "intuition": "For each number, check if (target - number) was seen before.",
+                 "code": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        unordered_map<int, int> seen; // value -> index\n        for (int i = 0; i < nums.size(); i++) {\n            int complement = target - nums[i];\n            if (seen.count(complement)) {\n                return {seen[complement], i};\n            }\n            seen[nums[i]] = i;\n        }\n        return {}; // no solution found\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(n)",
+                 "walkthrough": "Iterate through array. For each element, compute complement = target - nums[i]. If complement is in our map, we found the pair. Otherwise, store current element and index."
+             },
+             "followUps": ["What if array is sorted? (Two pointers)", "What if there are multiple solutions?"],
+             "relatedPatterns": ["Hash Map Lookup", "Two Pointers"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Microsoft", "Apple"]},
+            {"id": "p1.2", "title": "Group Anagrams", "difficulty": "medium", "source": "LeetCode #49",
+             "problemStatement": "Given an array of strings, group the anagrams together. An anagram is a word formed by rearranging the letters of another.",
+             "examples": [{"input": "strs = [\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"]", "output": "[[\"eat\",\"tea\",\"ate\"],[\"tan\",\"nat\"],[\"bat\"]]", "explanation": "Words with same letters grouped together"}],
+             "constraints": ["1 <= strs.length <= 10^4", "strs[i] consists of lowercase English letters"],
+             "hints": ["What's a good key for anagrams?", "Sort each word, or use character frequency as key"],
+             "bruteForce": {"approach": "Compare all pairs for anagram check", "timeComplexity": "O(n² * k)", "spaceComplexity": "O(n * k)"},
+             "optimalSolution": {
+                 "approach": "Sort each word as key, group in hash map",
+                 "intuition": "Anagrams have the same sorted form. Use sorted string as hash map key.",
+                 "code": "class Solution {\npublic:\n    vector<vector<string>> groupAnagrams(vector<string>& strs) {\n        unordered_map<string, vector<string>> groups;\n        for (auto& s : strs) {\n            string key = s;\n            sort(key.begin(), key.end());\n            groups[key].push_back(s);\n        }\n        vector<vector<string>> result;\n        for (auto& [key, group] : groups) {\n            result.push_back(group);\n        }\n        return result;\n    }\n};",
+                 "timeComplexity": "O(n * k log k)", "spaceComplexity": "O(n * k)",
+                 "walkthrough": "For each string, sort it to create a canonical key. All anagrams will have the same sorted key. Group them in a hash map."
+             },
+             "followUps": ["Can you use character count as key for O(n*k)?"],
+             "relatedPatterns": ["Group By Key", "Frequency Counter"],
+             "companiesAsked": ["Google", "Amazon", "Microsoft", "Facebook"]},
+            {"id": "p1.3", "title": "Top K Frequent Elements", "difficulty": "medium", "source": "LeetCode #347",
+             "problemStatement": "Given an integer array nums and an integer k, return the k most frequent elements.",
+             "examples": [{"input": "nums = [1,1,1,2,2,3], k = 2", "output": "[1,2]", "explanation": "1 appears 3 times, 2 appears 2 times"}],
+             "constraints": ["1 <= nums.length <= 10^5", "k is in range [1, number of unique elements]"],
+             "hints": ["Count frequencies first", "Use a heap or bucket sort"],
+             "bruteForce": {"approach": "Count frequencies, sort by frequency", "timeComplexity": "O(n log n)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Bucket sort by frequency",
+                 "intuition": "Frequency can be at most n. Create buckets indexed by frequency, put elements in their frequency bucket, then collect from highest bucket.",
+                 "code": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        unordered_map<int, int> freq;\n        for (int n : nums) freq[n]++;\n        \n        // Bucket sort: index = frequency\n        vector<vector<int>> buckets(nums.size() + 1);\n        for (auto& [num, count] : freq) {\n            buckets[count].push_back(num);\n        }\n        \n        vector<int> result;\n        for (int i = buckets.size() - 1; i >= 0 && result.size() < k; i--) {\n            for (int num : buckets[i]) {\n                result.push_back(num);\n                if (result.size() == k) break;\n            }\n        }\n        return result;\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(n)",
+                 "walkthrough": "Count frequencies with hash map. Create n+1 buckets. Place each number in bucket[its frequency]. Scan buckets from highest to lowest, collecting k elements."
+             },
+             "followUps": ["Can you solve it with a min-heap in O(n log k)?"],
+             "relatedPatterns": ["Frequency Counter", "Heap/Priority Queue"],
+             "companiesAsked": ["Amazon", "Google", "Facebook", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq1.1", "type": "pattern_match", "question": "You need to find if any two elements in an array sum to a target. Which pattern should you use?",
+             "options": ["Sorting + Binary Search", "Hash Map Lookup (One-pass)", "Sliding Window", "Recursion"],
+             "correctAnswer": "Hash Map Lookup (One-pass)",
+             "explanation": "One-pass hash map gives O(n) time. Store each element and check for complement."},
+            {"id": "cq1.2", "type": "complexity_analysis", "question": "What is the average time complexity of hash map insertion and lookup?",
+             "options": ["O(1)", "O(log n)", "O(n)", "O(n log n)"],
+             "correctAnswer": "O(1)",
+             "explanation": "Hash maps provide O(1) average for insert and lookup. Worst case is O(n) due to hash collisions."},
+            {"id": "cq1.3", "type": "approach_selection", "question": "To check if two strings are anagrams, the most efficient approach is:",
+             "options": ["Sort both strings and compare", "Use frequency count array of size 26", "Compare character by character", "Use a trie"],
+             "correctAnswer": "Use frequency count array of size 26",
+             "explanation": "Frequency counting with a fixed-size array is O(n) time and O(1) space (26 chars). Sorting is O(n log n)."}
+        ]
+    }
+
+def ch_two_pointers():
+    return {
+        "id": 2, "title": "Two Pointers", "slug": "two-pointers",
+        "description": "Opposite direction, same direction, fast-slow pointer techniques for arrays and linked lists.",
+        "icon": "👉👈", "difficulty": "beginner",
+        "patternOverview": "Two pointers use two indices/references to traverse data, reducing nested loops from O(n²) to O(n). Three variants: opposite direction (converging), same direction (fast-slow), and partitioning.",
+        "whenToUse": ["Sorted array pair/triplet problems", "Palindrome checking", "Removing duplicates in-place", "Partitioning arrays"],
+        "patterns": [
+            {"id": "2.1", "name": "Opposite Direction", "description": "Two pointers start at opposite ends and move toward each other.",
+             "intuition": "For sorted arrays: if sum too small, move left pointer right; if too large, move right pointer left. Each step eliminates possibilities, so O(n) total.",
+             "template": "int left = 0, right = n - 1;\nwhile (left < right) {\n    int sum = arr[left] + arr[right];\n    if (sum == target) return {left, right};\n    else if (sum < target) left++;\n    else right--;\n}",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Sorted array", "Find pair with target sum", "Palindrome check", "Container with most water"],
+             "variations": ["Two Sum II", "3Sum", "Container With Most Water", "Valid Palindrome"]},
+            {"id": "2.2", "name": "Fast-Slow (Floyd's)", "description": "Two pointers move at different speeds. Used for cycle detection and finding middle.",
+             "intuition": "If there's a cycle, the fast pointer will eventually lap the slow pointer. For finding middle: when fast reaches end, slow is at middle.",
+             "template": "ListNode *slow = head, *fast = head;\nwhile (fast && fast->next) {\n    slow = slow->next;\n    fast = fast->next->next;\n}\n// slow is at middle",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Cycle detection", "Find middle of linked list", "Find start of cycle", "Happy number"],
+             "variations": ["Linked List Cycle", "Middle of Linked List", "Happy Number"]},
+            {"id": "2.3", "name": "Partitioning (Dutch National Flag)", "description": "Three-way partition using two pointers to categorize elements.",
+             "intuition": "Maintain invariant: elements before low are category-1, between low and mid are category-2, after high are category-3.",
+             "template": "int low = 0, mid = 0, high = n - 1;\nwhile (mid <= high) {\n    if (arr[mid] == 0) swap(arr[low++], arr[mid++]);\n    else if (arr[mid] == 1) mid++;\n    else swap(arr[mid], arr[high--]);\n}",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Sort array with 3 categories", "Partition around pivot", "Move zeroes to end"],
+             "variations": ["Sort Colors", "Move Zeroes", "Partition Array"]}
+        ],
+        "problems": [
+            {"id": "p2.1", "title": "3Sum", "difficulty": "medium", "source": "LeetCode #15",
+             "problemStatement": "Given an integer array nums, return all triplets [nums[i], nums[j], nums[k]] such that i != j != k and nums[i] + nums[j] + nums[k] == 0.",
+             "examples": [{"input": "nums = [-1,0,1,2,-1,-4]", "output": "[[-1,-1,2],[-1,0,1]]", "explanation": "Two unique triplets sum to 0"}],
+             "constraints": ["3 <= nums.length <= 3000", "Answer must not contain duplicates"],
+             "hints": ["Sort first, then reduce to Two Sum II", "Skip duplicates to avoid duplicate triplets"],
+             "bruteForce": {"approach": "Three nested loops", "timeComplexity": "O(n³)", "spaceComplexity": "O(1)"},
+             "optimalSolution": {
+                 "approach": "Sort + Two Pointers",
+                 "intuition": "Fix one element, use two pointers for the remaining pair (Two Sum II on sorted array). Skip duplicates.",
+                 "code": "class Solution {\npublic:\n    vector<vector<int>> threeSum(vector<int>& nums) {\n        sort(nums.begin(), nums.end());\n        vector<vector<int>> result;\n        for (int i = 0; i < (int)nums.size() - 2; i++) {\n            if (i > 0 && nums[i] == nums[i-1]) continue; // skip dupes\n            int left = i + 1, right = nums.size() - 1;\n            while (left < right) {\n                int sum = nums[i] + nums[left] + nums[right];\n                if (sum == 0) {\n                    result.push_back({nums[i], nums[left], nums[right]});\n                    while (left < right && nums[left] == nums[left+1]) left++;\n                    while (left < right && nums[right] == nums[right-1]) right--;\n                    left++; right--;\n                } else if (sum < 0) left++;\n                else right--;\n            }\n        }\n        return result;\n    }\n};",
+                 "timeComplexity": "O(n²)", "spaceComplexity": "O(1) excluding output",
+                 "walkthrough": "Sort array. For each element i, use two pointers (left=i+1, right=end) to find pairs that sum to -nums[i]. Skip duplicate values."
+             },
+             "followUps": ["4Sum? Same approach with one more loop", "3Sum Closest?"],
+             "relatedPatterns": ["Opposite Direction Two Pointers"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Microsoft", "Nvidia"]},
+            {"id": "p2.2", "title": "Container With Most Water", "difficulty": "medium", "source": "LeetCode #11",
+             "problemStatement": "Given n non-negative integers height[i], find two lines that together with the x-axis form a container that holds the most water.",
+             "examples": [{"input": "height = [1,8,6,2,5,4,8,3,7]", "output": "49", "explanation": "Lines at index 1 and 8 form container with area 7*7=49"}],
+             "constraints": ["2 <= n <= 10^5"],
+             "hints": ["Start with widest container", "Move the shorter line inward"],
+             "bruteForce": {"approach": "Check all pairs of lines", "timeComplexity": "O(n²)", "spaceComplexity": "O(1)"},
+             "optimalSolution": {
+                 "approach": "Two pointers from ends",
+                 "intuition": "Start with widest container. Moving the shorter line inward might find a taller line. Moving the taller line can only decrease width without helping height.",
+                 "code": "class Solution {\npublic:\n    int maxArea(vector<int>& height) {\n        int left = 0, right = height.size() - 1;\n        int maxWater = 0;\n        while (left < right) {\n            int w = right - left;\n            int h = min(height[left], height[right]);\n            maxWater = max(maxWater, w * h);\n            if (height[left] < height[right]) left++;\n            else right--;\n        }\n        return maxWater;\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+                 "walkthrough": "Two pointers at ends. Calculate area. Move the pointer with shorter height inward (moving the taller one can't help). Track maximum."
+             },
+             "followUps": ["Trapping Rain Water (harder variant)"],
+             "relatedPatterns": ["Opposite Direction Two Pointers"],
+             "companiesAsked": ["Amazon", "Google", "Goldman Sachs", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq2.1", "type": "pattern_match", "question": "Array is sorted. Find if any pair sums to target. Best approach?",
+             "options": ["Hash Map", "Two Pointers (opposite direction)", "Binary Search for each element", "Sorting"],
+             "correctAnswer": "Two Pointers (opposite direction)",
+             "explanation": "Since array is already sorted, two pointers from ends gives O(n) time and O(1) space — better than hash map's O(n) space."},
+            {"id": "cq2.2", "type": "approach_selection", "question": "How do you detect a cycle in a linked list with O(1) space?",
+             "options": ["Hash set of visited nodes", "Floyd's fast-slow pointers", "Reverse the list", "Count nodes"],
+             "correctAnswer": "Floyd's fast-slow pointers",
+             "explanation": "Fast-slow pointers detect cycles in O(n) time, O(1) space. Hash set works but uses O(n) space."}
+        ]
+    }
+
+def ch_sliding_window():
+    return {
+        "id": 3, "title": "Sliding Window", "slug": "sliding-window",
+        "description": "Fixed-size and variable-size window techniques for substring and subarray problems.",
+        "icon": "🪟", "difficulty": "intermediate",
+        "patternOverview": "Sliding window maintains a window [left, right] over a sequence, expanding and shrinking to find optimal subarrays/substrings. Avoids recomputation by adding/removing one element at a time.",
+        "whenToUse": ["Find subarray/substring with specific property", "Maximum/minimum of window", "Longest/shortest substring with constraint", "Fixed-size window statistics"],
+        "patterns": [
+            {"id": "3.1", "name": "Variable-Size Window", "description": "Expand right until constraint is met, then shrink left to optimize.",
+             "intuition": "Grow the window by moving right. When a condition is violated (or met), shrink from left. Track the best window seen.",
+             "template": "int left = 0;\nfor (int right = 0; right < n; right++) {\n    // Add arr[right] to window\n    while (/* window violates constraint */) {\n        // Remove arr[left] from window\n        left++;\n    }\n    // Update answer with current window [left, right]\n}",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(k)",
+             "identificationSignals": ["Longest/shortest subarray", "Subarray with sum >= k", "Substring with at most k distinct characters"],
+             "variations": ["Longest Substring Without Repeating", "Minimum Window Substring", "Longest Repeating Character Replacement"]},
+            {"id": "3.2", "name": "Fixed-Size Window", "description": "Slide a window of fixed size k across the array.",
+             "intuition": "Maintain a window of exactly k elements. When moving right, add new element and remove leftmost. Compute statistic on each position.",
+             "template": "int windowSum = 0;\nfor (int i = 0; i < n; i++) {\n    windowSum += arr[i];\n    if (i >= k) windowSum -= arr[i - k];\n    if (i >= k - 1) result = max(result, windowSum);\n}",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Window of size k", "Maximum sum subarray of size k", "Average of subarrays"],
+             "variations": ["Maximum Average Subarray", "Sliding Window Maximum (with deque)"]}
+        ],
+        "problems": [
+            {"id": "p3.1", "title": "Longest Substring Without Repeating Characters", "difficulty": "medium", "source": "LeetCode #3",
+             "problemStatement": "Given a string s, find the length of the longest substring without repeating characters.",
+             "examples": [{"input": "s = \"abcabcbb\"", "output": "3", "explanation": "\"abc\" is the longest without repeats"}],
+             "constraints": ["0 <= s.length <= 5 * 10^4"],
+             "hints": ["Use a set to track characters in current window", "Shrink window when duplicate found"],
+             "bruteForce": {"approach": "Check all substrings for uniqueness", "timeComplexity": "O(n³)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Sliding window with hash set",
+                 "intuition": "Expand right. If duplicate found, shrink from left until no duplicate. Window always contains unique characters.",
+                 "code": "class Solution {\npublic:\n    int lengthOfLongestSubstring(string s) {\n        unordered_set<char> window;\n        int left = 0, maxLen = 0;\n        for (int right = 0; right < s.size(); right++) {\n            while (window.count(s[right])) {\n                window.erase(s[left++]);\n            }\n            window.insert(s[right]);\n            maxLen = max(maxLen, right - left + 1);\n        }\n        return maxLen;\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(min(n, alphabet_size))",
+                 "walkthrough": "Maintain a set of characters in the current window. Expand right by adding s[right]. If it's a duplicate, shrink from left until it's removed. Track max window size."
+             },
+             "followUps": ["Longest Substring with At Most K Distinct Characters"],
+             "relatedPatterns": ["Variable-Size Window"],
+             "companiesAsked": ["Amazon", "Google", "Facebook", "Microsoft", "Nvidia", "Qualcomm"]},
+            {"id": "p3.2", "title": "Minimum Window Substring", "difficulty": "hard", "source": "LeetCode #76",
+             "problemStatement": "Given strings s and t, return the minimum window substring of s such that every character in t (including duplicates) is included in the window.",
+             "examples": [{"input": "s = \"ADOBECODEBANC\", t = \"ABC\"", "output": "\"BANC\"", "explanation": "Minimum window containing A, B, and C"}],
+             "constraints": ["1 <= s.length, t.length <= 10^5"],
+             "hints": ["Use frequency map for t", "Expand right until all chars found, then shrink left"],
+             "bruteForce": {"approach": "Check all substrings", "timeComplexity": "O(n² * m)", "spaceComplexity": "O(m)"},
+             "optimalSolution": {
+                 "approach": "Sliding window with frequency tracking",
+                 "intuition": "Track how many characters from t are satisfied. Expand right until all satisfied, then shrink left to minimize window.",
+                 "code": "class Solution {\npublic:\n    string minWindow(string s, string t) {\n        unordered_map<char, int> need, have;\n        for (char c : t) need[c]++;\n        int required = need.size(), formed = 0;\n        int left = 0, minLen = INT_MAX, minStart = 0;\n        \n        for (int right = 0; right < s.size(); right++) {\n            have[s[right]]++;\n            if (need.count(s[right]) && have[s[right]] == need[s[right]])\n                formed++;\n            \n            while (formed == required) {\n                if (right - left + 1 < minLen) {\n                    minLen = right - left + 1;\n                    minStart = left;\n                }\n                have[s[left]]--;\n                if (need.count(s[left]) && have[s[left]] < need[s[left]])\n                    formed--;\n                left++;\n            }\n        }\n        return minLen == INT_MAX ? \"\" : s.substr(minStart, minLen);\n    }\n};",
+                 "timeComplexity": "O(n + m)", "spaceComplexity": "O(m)",
+                 "walkthrough": "Count required characters from t. Expand right, tracking how many requirements are met. When all met, shrink from left to find minimum. Track best window."
+             },
+             "followUps": ["What if we need to find all minimum windows?"],
+             "relatedPatterns": ["Variable-Size Window", "Frequency Counter"],
+             "companiesAsked": ["Google", "Facebook", "Amazon", "Uber", "Arista Networks"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq3.1", "type": "pattern_match", "question": "Find longest subarray with sum <= k. Which pattern?",
+             "options": ["Two Pointers", "Variable-Size Sliding Window", "Binary Search", "Dynamic Programming"],
+             "correctAnswer": "Variable-Size Sliding Window",
+             "explanation": "Variable window: expand right (add to sum), shrink left when sum > k. Track maximum window length."},
+            {"id": "cq3.2", "type": "complexity_analysis", "question": "Why is sliding window O(n) even though it has a nested while loop?",
+             "options": ["The while loop runs O(1) on average", "Left pointer moves at most n times total", "The compiler optimizes it", "It's actually O(n²)"],
+             "correctAnswer": "Left pointer moves at most n times total",
+             "explanation": "Each element is added and removed from the window at most once. Left pointer moves at most n times total across all iterations, so total work is O(n)."}
+        ]
+    }
+
+def ch_binary_search():
+    return {
+        "id": 4, "title": "Binary Search", "slug": "binary-search",
+        "description": "Classic binary search, search on answer, and rotated array patterns.",
+        "icon": "🔍", "difficulty": "intermediate",
+        "patternOverview": "Binary search eliminates half the search space each step, giving O(log n) time. Beyond sorted arrays, it applies to any monotonic predicate — 'binary search on the answer'.",
+        "whenToUse": ["Sorted array lookup", "Find boundary (first/last occurrence)", "Minimize/maximize a value with monotonic feasibility", "Rotated sorted array"],
+        "patterns": [
+            {"id": "4.1", "name": "Standard Binary Search", "description": "Find target in sorted array or find insertion point.",
+             "intuition": "Compare target with middle element. If equal, found. If less, search left half. If greater, search right half. Each comparison halves the search space.",
+             "template": "int lo = 0, hi = n - 1;\nwhile (lo <= hi) {\n    int mid = lo + (hi - lo) / 2; // avoid overflow\n    if (arr[mid] == target) return mid;\n    else if (arr[mid] < target) lo = mid + 1;\n    else hi = mid - 1;\n}\nreturn -1; // not found",
+             "timeComplexity": "O(log n)", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Sorted array", "Find specific value", "Find insertion position", "O(log n) requirement"],
+             "variations": ["Search Insert Position", "First/Last Position", "Search in Rotated Array"]},
+            {"id": "4.2", "name": "Binary Search on Answer", "description": "Binary search on the result space when feasibility is monotonic.",
+             "intuition": "If you can check whether an answer X is feasible in O(n), and feasibility is monotonic (all X >= answer are feasible, or all X <= answer are feasible), binary search on X.",
+             "template": "int lo = minAnswer, hi = maxAnswer;\nwhile (lo < hi) {\n    int mid = lo + (hi - lo) / 2;\n    if (isFeasible(mid)) hi = mid;  // try smaller\n    else lo = mid + 1;\n}\nreturn lo; // minimum feasible answer",
+             "timeComplexity": "O(n log(range))", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Minimize the maximum", "Maximize the minimum", "Can you do X in k steps?", "Capacity/speed optimization"],
+             "variations": ["Koko Eating Bananas", "Split Array Largest Sum", "Capacity To Ship Packages"]}
+        ],
+        "problems": [
+            {"id": "p4.1", "title": "Search in Rotated Sorted Array", "difficulty": "medium", "source": "LeetCode #33",
+             "problemStatement": "Given a rotated sorted array (no duplicates) and a target, return its index or -1.",
+             "examples": [{"input": "nums = [4,5,6,7,0,1,2], target = 0", "output": "4", "explanation": "0 is at index 4"}],
+             "constraints": ["1 <= nums.length <= 5000", "All values are unique"],
+             "hints": ["One half is always sorted", "Determine which half target could be in"],
+             "bruteForce": {"approach": "Linear scan", "timeComplexity": "O(n)", "spaceComplexity": "O(1)"},
+             "optimalSolution": {
+                 "approach": "Modified binary search",
+                 "intuition": "At each step, one half is sorted. Check if target is in the sorted half; if yes, search there, else search the other half.",
+                 "code": "class Solution {\npublic:\n    int search(vector<int>& nums, int target) {\n        int lo = 0, hi = nums.size() - 1;\n        while (lo <= hi) {\n            int mid = lo + (hi - lo) / 2;\n            if (nums[mid] == target) return mid;\n            \n            if (nums[lo] <= nums[mid]) { // left half sorted\n                if (nums[lo] <= target && target < nums[mid])\n                    hi = mid - 1;\n                else\n                    lo = mid + 1;\n            } else { // right half sorted\n                if (nums[mid] < target && target <= nums[hi])\n                    lo = mid + 1;\n                else\n                    hi = mid - 1;\n            }\n        }\n        return -1;\n    }\n};",
+                 "timeComplexity": "O(log n)", "spaceComplexity": "O(1)",
+                 "walkthrough": "At each step: if left half is sorted (nums[lo] <= nums[mid]), check if target is in [lo, mid). If right half sorted, check [mid, hi]. Always search the correct half."
+             },
+             "followUps": ["What if duplicates exist? (LC #81)", "Find minimum in rotated sorted array (LC #153)"],
+             "relatedPatterns": ["Standard Binary Search"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Microsoft", "Nvidia", "Qualcomm"]},
+            {"id": "p4.2", "title": "Koko Eating Bananas", "difficulty": "medium", "source": "LeetCode #875",
+             "problemStatement": "Koko can eat at speed k bananas/hour. Given piles and h hours, find minimum k to eat all bananas in h hours.",
+             "examples": [{"input": "piles = [3,6,7,11], h = 8", "output": "4", "explanation": "At speed 4: ceil(3/4)+ceil(6/4)+ceil(7/4)+ceil(11/4) = 1+2+2+3 = 8 <= 8"}],
+             "constraints": ["1 <= piles.length <= 10^4", "1 <= h <= 10^9"],
+             "hints": ["Binary search on the eating speed k", "Check if speed k allows finishing in h hours"],
+             "bruteForce": {"approach": "Try every speed from 1 to max(piles)", "timeComplexity": "O(max(piles) * n)", "spaceComplexity": "O(1)"},
+             "optimalSolution": {
+                 "approach": "Binary search on answer",
+                 "intuition": "If speed k works, any speed > k also works (monotonic). Binary search for minimum k where total hours <= h.",
+                 "code": "class Solution {\npublic:\n    int minEatingSpeed(vector<int>& piles, int h) {\n        int lo = 1, hi = *max_element(piles.begin(), piles.end());\n        while (lo < hi) {\n            int mid = lo + (hi - lo) / 2;\n            long hours = 0;\n            for (int p : piles)\n                hours += (p + mid - 1) / mid; // ceil division\n            if (hours <= h) hi = mid;\n            else lo = mid + 1;\n        }\n        return lo;\n    }\n};",
+                 "timeComplexity": "O(n * log(max(piles)))", "spaceComplexity": "O(1)",
+                 "walkthrough": "Binary search on speed [1, max(piles)]. For each speed mid, calculate total hours. If <= h, try smaller speed (hi=mid). Else need faster (lo=mid+1)."
+             },
+             "followUps": ["Split Array Largest Sum", "Capacity To Ship Packages"],
+             "relatedPatterns": ["Binary Search on Answer"],
+             "companiesAsked": ["Google", "Facebook", "Amazon"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq4.1", "type": "pattern_match", "question": "Minimize the maximum load across k workers. Which pattern?",
+             "options": ["Greedy", "Dynamic Programming", "Binary Search on Answer", "Divide and Conquer"],
+             "correctAnswer": "Binary Search on Answer",
+             "explanation": "If max load X is feasible with k workers, any X' > X is also feasible. Binary search for minimum feasible X."},
+            {"id": "cq4.2", "type": "code_output", "question": "Why use mid = lo + (hi - lo) / 2 instead of (lo + hi) / 2?",
+             "options": ["It's faster", "Prevents integer overflow", "Gives different result", "Required by the standard"],
+             "correctAnswer": "Prevents integer overflow",
+             "explanation": "If lo and hi are large, (lo + hi) can overflow int. lo + (hi - lo) / 2 is equivalent but safe."}
+        ]
+    }
+
+def ch_stack():
+    return {
+        "id": 5, "title": "Stack", "slug": "stack",
+        "description": "Monotonic stack, expression evaluation, and histogram-based problems.",
+        "icon": "📚", "difficulty": "intermediate",
+        "patternOverview": "Stacks maintain LIFO ordering. Monotonic stacks keep elements in sorted order, efficiently finding the next greater/smaller element. Key for histogram, temperature, and expression problems.",
+        "whenToUse": ["Next greater/smaller element", "Matching parentheses", "Expression evaluation", "Histogram area problems"],
+        "patterns": [
+            {"id": "5.1", "name": "Monotonic Stack", "description": "Stack maintains elements in increasing or decreasing order.",
+             "intuition": "When we encounter an element, pop all elements from stack that violate the monotonic property. Each popped element has found its 'next greater/smaller'.",
+             "template": "stack<int> st;\nfor (int i = 0; i < n; i++) {\n    while (!st.empty() && arr[st.top()] < arr[i]) {\n        int idx = st.top(); st.pop();\n        result[idx] = arr[i]; // next greater for idx is arr[i]\n    }\n    st.push(i);\n}",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(n)",
+             "identificationSignals": ["Next greater/smaller element", "Days until warmer temperature", "Largest rectangle in histogram", "Stock span"],
+             "variations": ["Next Greater Element", "Daily Temperatures", "Largest Rectangle in Histogram"]}
+        ],
+        "problems": [
+            {"id": "p5.1", "title": "Valid Parentheses", "difficulty": "easy", "source": "LeetCode #20",
+             "problemStatement": "Given a string containing just '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
+             "examples": [{"input": "s = \"([])\"", "output": "true", "explanation": "Brackets properly nested"}],
+             "constraints": ["1 <= s.length <= 10^4"],
+             "hints": ["Push opening brackets", "Pop and match for closing brackets"],
+             "bruteForce": {"approach": "Repeatedly remove matched pairs", "timeComplexity": "O(n²)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Stack matching",
+                 "intuition": "Push open brackets. For close brackets, check if top of stack matches. Valid if stack is empty at end.",
+                 "code": "class Solution {\npublic:\n    bool isValid(string s) {\n        stack<char> st;\n        unordered_map<char, char> match = {{')', '('}, {']', '['}, {'}', '{'}};\n        for (char c : s) {\n            if (match.count(c)) {\n                if (st.empty() || st.top() != match[c]) return false;\n                st.pop();\n            } else {\n                st.push(c);\n            }\n        }\n        return st.empty();\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(n)",
+                 "walkthrough": "For each character: if opening bracket, push. If closing bracket, check stack top matches. Return true if stack empty at end."
+             },
+             "followUps": ["Minimum Remove to Make Valid Parentheses"],
+             "relatedPatterns": ["Stack Matching"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Microsoft"]},
+            {"id": "p5.2", "title": "Daily Temperatures", "difficulty": "medium", "source": "LeetCode #739",
+             "problemStatement": "Given daily temperatures, for each day find how many days until a warmer temperature. Return 0 if no warmer day.",
+             "examples": [{"input": "temperatures = [73,74,75,71,69,72,76,73]", "output": "[1,1,4,2,1,1,0,0]", "explanation": "Day 0 (73°) waits 1 day for 74°"}],
+             "constraints": ["1 <= temperatures.length <= 10^5"],
+             "hints": ["Use a decreasing monotonic stack", "Stack stores indices of unresolved days"],
+             "bruteForce": {"approach": "For each day, scan forward", "timeComplexity": "O(n²)", "spaceComplexity": "O(1)"},
+             "optimalSolution": {
+                 "approach": "Decreasing monotonic stack",
+                 "intuition": "Stack holds indices of days waiting for a warmer day. When we find a warmer day, pop all cooler days from stack.",
+                 "code": "class Solution {\npublic:\n    vector<int> dailyTemperatures(vector<int>& temps) {\n        int n = temps.size();\n        vector<int> result(n, 0);\n        stack<int> st; // indices of decreasing temps\n        for (int i = 0; i < n; i++) {\n            while (!st.empty() && temps[i] > temps[st.top()]) {\n                int prev = st.top(); st.pop();\n                result[prev] = i - prev;\n            }\n            st.push(i);\n        }\n        return result;\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(n)",
+                 "walkthrough": "Maintain stack of indices with decreasing temperatures. For each new temperature, pop all colder days from stack — those days have found their answer."
+             },
+             "followUps": ["Next Greater Element I/II"],
+             "relatedPatterns": ["Monotonic Stack"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq5.1", "type": "pattern_match", "question": "For each element, find the next element that is greater. Best approach?",
+             "options": ["Binary Search", "Monotonic Stack", "Sorting", "Two Pointers"],
+             "correctAnswer": "Monotonic Stack",
+             "explanation": "Monotonic decreasing stack: pop smaller elements when larger element found. Each element is pushed/popped once = O(n)."},
+            {"id": "cq5.2", "type": "complexity_analysis", "question": "Why is the monotonic stack pattern O(n) despite the nested while loop?",
+             "options": ["Each element is pushed and popped at most once", "The while loop runs O(1) times", "It uses amortized analysis", "Both A and C"],
+             "correctAnswer": "Both A and C",
+             "explanation": "Each element is pushed once and popped once, so total operations across all iterations = O(n). This is amortized O(1) per element."}
+        ]
+    }
+
+def ch_linked_list():
+    return {
+        "id": 6, "title": "Linked Lists", "slug": "linked-lists",
+        "description": "Reversal, cycle detection, merging, and advanced linked list techniques.",
+        "icon": "🔗", "difficulty": "intermediate",
+        "patternOverview": "Linked list problems test pointer manipulation skills. Key patterns: in-place reversal, fast-slow pointer (Floyd's), merge two sorted, and dummy head technique.",
+        "whenToUse": ["Reverse a portion of a list", "Detect or find cycle start", "Merge sorted lists", "Find middle or kth from end"],
+        "patterns": [
+            {"id": "6.1", "name": "In-Place Reversal", "description": "Reverse a linked list by rewiring pointers.",
+             "intuition": "Maintain three pointers: prev, curr, next. For each node: save next, point curr to prev, advance prev and curr.",
+             "template": "ListNode* prev = nullptr, *curr = head;\nwhile (curr) {\n    ListNode* next = curr->next;\n    curr->next = prev;\n    prev = curr;\n    curr = next;\n}\nreturn prev; // new head",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Reverse a linked list", "Reverse between positions", "Palindrome linked list"],
+             "variations": ["Reverse Linked List", "Reverse Between", "Palindrome Linked List"]}
+        ],
+        "problems": [
+            {"id": "p6.1", "title": "Reverse Linked List", "difficulty": "easy", "source": "LeetCode #206",
+             "problemStatement": "Given the head of a singly linked list, reverse the list, and return the reversed list.",
+             "examples": [{"input": "head = [1,2,3,4,5]", "output": "[5,4,3,2,1]", "explanation": "List reversed"}],
+             "constraints": ["0 <= n <= 5000"],
+             "hints": ["Use three pointers", "Or solve recursively"],
+             "bruteForce": {"approach": "Store values in array, rebuild", "timeComplexity": "O(n)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Iterative pointer reversal",
+                 "intuition": "Walk through list, reversing each pointer. prev starts at null, becomes the new head.",
+                 "code": "class Solution {\npublic:\n    ListNode* reverseList(ListNode* head) {\n        ListNode* prev = nullptr;\n        ListNode* curr = head;\n        while (curr) {\n            ListNode* next = curr->next;\n            curr->next = prev;\n            prev = curr;\n            curr = next;\n        }\n        return prev;\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+                 "walkthrough": "Three pointers: prev=null, curr=head. Each step: save next, reverse pointer, advance. When done, prev is new head."
+             },
+             "followUps": ["Reverse in groups of k", "Reverse between positions m and n"],
+             "relatedPatterns": ["In-Place Reversal"],
+             "companiesAsked": ["Google", "Amazon", "Microsoft", "Facebook"]},
+            {"id": "p6.2", "title": "Merge Two Sorted Lists", "difficulty": "easy", "source": "LeetCode #21",
+             "problemStatement": "Merge two sorted linked lists and return as one sorted list.",
+             "examples": [{"input": "l1 = [1,2,4], l2 = [1,3,4]", "output": "[1,1,2,3,4,4]", "explanation": "Merged in sorted order"}],
+             "constraints": ["0 <= list length <= 50"],
+             "hints": ["Use a dummy head node", "Compare and pick smaller"],
+             "bruteForce": {"approach": "Merge into array, sort, rebuild", "timeComplexity": "O(n log n)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Iterative merge with dummy head",
+                 "intuition": "Use dummy node to simplify head handling. Compare nodes from both lists, append smaller one.",
+                 "code": "class Solution {\npublic:\n    ListNode* mergeTwoLists(ListNode* l1, ListNode* l2) {\n        ListNode dummy(0);\n        ListNode* tail = &dummy;\n        while (l1 && l2) {\n            if (l1->val <= l2->val) {\n                tail->next = l1;\n                l1 = l1->next;\n            } else {\n                tail->next = l2;\n                l2 = l2->next;\n            }\n            tail = tail->next;\n        }\n        tail->next = l1 ? l1 : l2;\n        return dummy.next;\n    }\n};",
+                 "timeComplexity": "O(n + m)", "spaceComplexity": "O(1)",
+                 "walkthrough": "Dummy node avoids special-casing the head. Compare front nodes of both lists, attach smaller one to result tail. Append remaining nodes."
+             },
+             "followUps": ["Merge K Sorted Lists (use heap)"],
+             "relatedPatterns": ["Merge Pattern"],
+             "companiesAsked": ["Amazon", "Google", "Microsoft", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq6.1", "type": "pattern_match", "question": "Check if a linked list is a palindrome in O(1) space?",
+             "options": ["Stack", "Reverse second half + compare", "Hash set", "Recursion"],
+             "correctAnswer": "Reverse second half + compare",
+             "explanation": "Find middle with slow-fast. Reverse second half. Compare both halves node by node. O(n) time, O(1) space."},
+            {"id": "cq6.2", "type": "approach_selection", "question": "Why use a dummy head node when building a linked list?",
+             "options": ["Performance improvement", "Eliminates null check for head", "Required by the standard", "Reduces memory usage"],
+             "correctAnswer": "Eliminates null check for head",
+             "explanation": "Dummy node means you never have to special-case 'head is null'. Just return dummy.next at the end."}
+        ]
+    }
+
+def ch_trees():
+    return {
+        "id": 7, "title": "Trees", "slug": "trees",
+        "description": "DFS/BFS traversals, LCA, diameter, serialize/deserialize, and path problems.",
+        "icon": "🌳", "difficulty": "intermediate",
+        "patternOverview": "Tree problems are recursive by nature. DFS explores depth-first (preorder, inorder, postorder). BFS goes level by level. Most tree problems reduce to: what information do I need from my left and right children?",
+        "whenToUse": ["Hierarchical data", "Recursive subproblems", "Level-order processing", "Path finding"],
+        "patterns": [
+            {"id": "7.1", "name": "DFS (Recursive/Iterative)", "description": "Explore tree depth-first. Three orderings: preorder (root-left-right), inorder (left-root-right), postorder (left-right-root).",
+             "intuition": "At each node, decide what to do before/after visiting children. Preorder = process then recurse. Postorder = recurse then combine.",
+             "template": "void dfs(TreeNode* node) {\n    if (!node) return;\n    // preorder: process node here\n    dfs(node->left);\n    // inorder: process node here\n    dfs(node->right);\n    // postorder: process node here\n}",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(h) where h = tree height",
+             "identificationSignals": ["Tree traversal", "Path from root", "Subtree properties", "Height/depth calculations"],
+             "variations": ["Preorder", "Inorder", "Postorder", "Morris Traversal (O(1) space)"]},
+            {"id": "7.2", "name": "BFS (Level Order)", "description": "Process tree level by level using a queue.",
+             "intuition": "Queue holds all nodes at current level. Process them, add their children (next level). Track level boundaries.",
+             "template": "queue<TreeNode*> q;\nq.push(root);\nwhile (!q.empty()) {\n    int levelSize = q.size();\n    for (int i = 0; i < levelSize; i++) {\n        TreeNode* node = q.front(); q.pop();\n        // process node\n        if (node->left) q.push(node->left);\n        if (node->right) q.push(node->right);\n    }\n}",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(w) where w = max width",
+             "identificationSignals": ["Level-order traversal", "Minimum depth", "Right side view", "Zigzag traversal"],
+             "variations": ["Level Order Traversal", "Right Side View", "Zigzag Level Order"]}
+        ],
+        "problems": [
+            {"id": "p7.1", "title": "Maximum Depth of Binary Tree", "difficulty": "easy", "source": "LeetCode #104",
+             "problemStatement": "Given the root of a binary tree, return its maximum depth.",
+             "examples": [{"input": "root = [3,9,20,null,null,15,7]", "output": "3", "explanation": "Depth: root(1) -> 20(2) -> 15 or 7(3)"}],
+             "constraints": ["0 <= number of nodes <= 10^4"],
+             "hints": ["Depth = 1 + max(left depth, right depth)"],
+             "bruteForce": {"approach": "Same as optimal for this problem", "timeComplexity": "O(n)", "spaceComplexity": "O(h)"},
+             "optimalSolution": {
+                 "approach": "Recursive DFS",
+                 "intuition": "A tree's depth = 1 + max(left subtree depth, right subtree depth). Base case: null node has depth 0.",
+                 "code": "class Solution {\npublic:\n    int maxDepth(TreeNode* root) {\n        if (!root) return 0;\n        return 1 + max(maxDepth(root->left), maxDepth(root->right));\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(h)",
+                 "walkthrough": "Base case: null returns 0. Each node returns 1 + max of children's depths. This naturally computes the maximum depth."
+             },
+             "followUps": ["Minimum Depth", "Balanced Binary Tree"],
+             "relatedPatterns": ["DFS Recursive"],
+             "companiesAsked": ["Amazon", "Google", "Microsoft"]},
+            {"id": "p7.2", "title": "Lowest Common Ancestor", "difficulty": "medium", "source": "LeetCode #236",
+             "problemStatement": "Given a binary tree, find the lowest common ancestor (LCA) of two given nodes.",
+             "examples": [{"input": "root = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 1", "output": "3", "explanation": "LCA of 5 and 1 is 3"}],
+             "constraints": ["All node values are unique", "p and q exist in the tree"],
+             "hints": ["If current node is p or q, it could be the LCA", "If p and q are on different sides, current node is LCA"],
+             "bruteForce": {"approach": "Find paths to both nodes, compare", "timeComplexity": "O(n)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Recursive DFS",
+                 "intuition": "If a node finds p in left subtree and q in right (or vice versa), it's the LCA. If it IS p or q, return itself.",
+                 "code": "class Solution {\npublic:\n    TreeNode* lowestCommonAncestor(TreeNode* root, TreeNode* p, TreeNode* q) {\n        if (!root || root == p || root == q) return root;\n        TreeNode* left = lowestCommonAncestor(root->left, p, q);\n        TreeNode* right = lowestCommonAncestor(root->right, p, q);\n        if (left && right) return root; // p and q on different sides\n        return left ? left : right;\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(h)",
+                 "walkthrough": "If root is null or p or q, return root. Recurse left and right. If both return non-null, root is LCA. Otherwise return the non-null side."
+             },
+             "followUps": ["LCA of BST (simpler)", "LCA with parent pointers"],
+             "relatedPatterns": ["DFS Recursive"],
+             "companiesAsked": ["Google", "Facebook", "Amazon", "Microsoft", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq7.1", "type": "pattern_match", "question": "Print tree nodes level by level. Which traversal?",
+             "options": ["DFS Preorder", "DFS Inorder", "BFS Level Order", "DFS Postorder"],
+             "correctAnswer": "BFS Level Order",
+             "explanation": "BFS with a queue naturally processes nodes level by level."},
+            {"id": "cq7.2", "type": "approach_selection", "question": "Inorder traversal of a BST gives elements in what order?",
+             "options": ["Random", "Sorted ascending", "Sorted descending", "Level order"],
+             "correctAnswer": "Sorted ascending",
+             "explanation": "BST property: left < root < right. Inorder visits left, root, right — producing sorted order."}
+        ]
+    }
+
+def ch_dp_1d():
+    return {
+        "id": 8, "title": "Dynamic Programming — 1D", "slug": "dp-1d",
+        "description": "Climbing stairs, house robber, coin change, LIS, and word break patterns.",
+        "icon": "📈", "difficulty": "intermediate",
+        "patternOverview": "DP solves problems with optimal substructure and overlapping subproblems. Define state, recurrence relation, and base cases. Two approaches: top-down (memoization) and bottom-up (tabulation).",
+        "whenToUse": ["Counting ways", "Optimization (min/max)", "Decision making (take/skip)", "Overlapping subproblems"],
+        "patterns": [
+            {"id": "8.1", "name": "Take or Skip", "description": "At each position, decide to take (and skip adjacent) or skip current.",
+             "intuition": "dp[i] = max(take current + dp[i-2], skip current + dp[i-1]). Classic for non-adjacent selection problems.",
+             "template": "dp[0] = nums[0];\ndp[1] = max(nums[0], nums[1]);\nfor (int i = 2; i < n; i++)\n    dp[i] = max(dp[i-1], dp[i-2] + nums[i]);",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(1) with optimization",
+             "identificationSignals": ["Cannot take adjacent elements", "Maximize sum with constraints", "House robber pattern"],
+             "variations": ["House Robber", "House Robber II (circular)", "Delete and Earn"]},
+            {"id": "8.2", "name": "Coin Change / Unbounded Knapsack", "description": "Find minimum coins / count ways to make an amount.",
+             "intuition": "dp[amount] = min over all coins c: dp[amount - c] + 1. Build solutions for small amounts first.",
+             "template": "vector<int> dp(amount + 1, INT_MAX);\ndp[0] = 0;\nfor (int i = 1; i <= amount; i++)\n    for (int c : coins)\n        if (c <= i && dp[i-c] != INT_MAX)\n            dp[i] = min(dp[i], dp[i-c] + 1);",
+             "timeComplexity": "O(amount * coins)", "spaceComplexity": "O(amount)",
+             "identificationSignals": ["Minimum number of items", "Count combinations to reach target", "Unlimited supply of items"],
+             "variations": ["Coin Change", "Coin Change II (count ways)", "Perfect Squares"]}
+        ],
+        "problems": [
+            {"id": "p8.1", "title": "House Robber", "difficulty": "medium", "source": "LeetCode #198",
+             "problemStatement": "Given an array representing money in houses along a street, find maximum money you can rob without robbing adjacent houses.",
+             "examples": [{"input": "nums = [2,7,9,3,1]", "output": "12", "explanation": "Rob houses 0, 2, 4: 2+9+1=12"}],
+             "constraints": ["1 <= nums.length <= 100"],
+             "hints": ["For each house: rob it + best from 2 back, or skip it"],
+             "bruteForce": {"approach": "Try all subsets of non-adjacent houses", "timeComplexity": "O(2^n)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "DP with space optimization",
+                 "intuition": "dp[i] = max(dp[i-1], dp[i-2] + nums[i]). Only need last two values.",
+                 "code": "class Solution {\npublic:\n    int rob(vector<int>& nums) {\n        if (nums.size() == 1) return nums[0];\n        int prev2 = 0, prev1 = 0;\n        for (int num : nums) {\n            int curr = max(prev1, prev2 + num);\n            prev2 = prev1;\n            prev1 = curr;\n        }\n        return prev1;\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+                 "walkthrough": "At each house: either skip it (take prev1) or rob it (prev2 + current). Only need two previous values, so O(1) space."
+             },
+             "followUps": ["House Robber II (circular street)", "House Robber III (tree)"],
+             "relatedPatterns": ["Take or Skip"],
+             "companiesAsked": ["Google", "Amazon", "Nvidia", "Qualcomm"]},
+            {"id": "p8.2", "title": "Coin Change", "difficulty": "medium", "source": "LeetCode #322",
+             "problemStatement": "Given coins of different denominations and an amount, return fewest coins needed. Return -1 if not possible.",
+             "examples": [{"input": "coins = [1,5,11], amount = 15", "output": "3", "explanation": "5+5+5 = 15 (3 coins, not 11+1+1+1+1 = 5 coins)"}],
+             "constraints": ["1 <= coins.length <= 12", "0 <= amount <= 10^4"],
+             "hints": ["Build solutions bottom-up from 0 to amount", "dp[i] = min(dp[i-c] + 1) for each coin c"],
+             "bruteForce": {"approach": "Try all combinations recursively", "timeComplexity": "O(amount^n)", "spaceComplexity": "O(amount)"},
+             "optimalSolution": {
+                 "approach": "Bottom-up DP",
+                 "intuition": "dp[i] = minimum coins to make amount i. For each amount, try each coin and take the minimum.",
+                 "code": "class Solution {\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        vector<int> dp(amount + 1, amount + 1);\n        dp[0] = 0;\n        for (int i = 1; i <= amount; i++) {\n            for (int c : coins) {\n                if (c <= i) {\n                    dp[i] = min(dp[i], dp[i - c] + 1);\n                }\n            }\n        }\n        return dp[amount] > amount ? -1 : dp[amount];\n    }\n};",
+                 "timeComplexity": "O(amount * coins)", "spaceComplexity": "O(amount)",
+                 "walkthrough": "dp[0]=0. For each amount i from 1 to target: try each coin c<=i, take min(dp[i], dp[i-c]+1). If dp[amount] unchanged, return -1."
+             },
+             "followUps": ["Coin Change II (count combinations)", "Perfect Squares"],
+             "relatedPatterns": ["Unbounded Knapsack"],
+             "companiesAsked": ["Amazon", "Google", "Microsoft", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq8.1", "type": "pattern_match", "question": "Cannot select adjacent elements, maximize sum. Which DP pattern?",
+             "options": ["Knapsack", "Take or Skip", "LIS", "Matrix Chain"],
+             "correctAnswer": "Take or Skip",
+             "explanation": "Classic take-or-skip: dp[i] = max(dp[i-1], dp[i-2] + nums[i])."},
+            {"id": "cq8.2", "type": "approach_selection", "question": "Top-down vs Bottom-up DP: which is generally more space efficient?",
+             "options": ["Top-down (memoization)", "Bottom-up (tabulation)", "Both are the same", "Depends on the problem"],
+             "correctAnswer": "Bottom-up (tabulation)",
+             "explanation": "Bottom-up allows space optimization (rolling arrays). Top-down uses recursion stack + memo table."}
+        ]
+    }
+
+def ch_dp_2d():
+    return {
+        "id": 9, "title": "Dynamic Programming — 2D", "slug": "dp-2d",
+        "description": "Grid paths, edit distance, LCS, knapsack, and matrix-based DP.",
+        "icon": "🧩", "difficulty": "advanced",
+        "patternOverview": "2D DP uses a table where dp[i][j] represents the solution for a subproblem defined by two parameters (e.g., two string indices, grid position, items and capacity).",
+        "whenToUse": ["Two strings comparison", "Grid path problems", "Subset selection with capacity", "Sequence alignment"],
+        "patterns": [
+            {"id": "9.1", "name": "Two Strings DP", "description": "Compare two strings character by character, building solutions in a 2D table.",
+             "intuition": "dp[i][j] = answer for first i chars of s1 and first j chars of s2. Transition depends on whether s1[i-1] == s2[j-1].",
+             "template": "for (int i = 1; i <= m; i++)\n    for (int j = 1; j <= n; j++)\n        if (s1[i-1] == s2[j-1])\n            dp[i][j] = dp[i-1][j-1] + 1;\n        else\n            dp[i][j] = max(dp[i-1][j], dp[i][j-1]);",
+             "timeComplexity": "O(m * n)", "spaceComplexity": "O(m * n), optimizable to O(min(m,n))",
+             "identificationSignals": ["Longest Common Subsequence", "Edit Distance", "String interleaving", "Regex matching"],
+             "variations": ["LCS", "Edit Distance", "Distinct Subsequences"]},
+            {"id": "9.2", "name": "0/1 Knapsack", "description": "Select items (each used at most once) to maximize value within capacity.",
+             "intuition": "dp[i][w] = max value using first i items with capacity w. Either include item i (if it fits) or exclude it.",
+             "template": "for (int i = 1; i <= n; i++)\n    for (int w = 0; w <= W; w++)\n        if (weight[i-1] <= w)\n            dp[i][w] = max(dp[i-1][w], dp[i-1][w-weight[i-1]] + value[i-1]);\n        else\n            dp[i][w] = dp[i-1][w];",
+             "timeComplexity": "O(n * W)", "spaceComplexity": "O(n * W)",
+             "identificationSignals": ["Select subset with capacity constraint", "Maximize/minimize with weight limit", "Partition into equal subsets"],
+             "variations": ["0/1 Knapsack", "Partition Equal Subset Sum", "Target Sum"]}
+        ],
+        "problems": [
+            {"id": "p9.1", "title": "Longest Common Subsequence", "difficulty": "medium", "source": "LeetCode #1143",
+             "problemStatement": "Given two strings, return the length of their longest common subsequence.",
+             "examples": [{"input": "text1 = \"abcde\", text2 = \"ace\"", "output": "3", "explanation": "LCS is \"ace\""}],
+             "constraints": ["1 <= text1.length, text2.length <= 1000"],
+             "hints": ["If chars match, extend LCS", "If not, take best of excluding either char"],
+             "bruteForce": {"approach": "Generate all subsequences and compare", "timeComplexity": "O(2^n * m)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "2D DP table",
+                 "intuition": "If chars match, LCS extends by 1. If not, take max of excluding last char from either string.",
+                 "code": "class Solution {\npublic:\n    int longestCommonSubsequence(string t1, string t2) {\n        int m = t1.size(), n = t2.size();\n        vector<vector<int>> dp(m+1, vector<int>(n+1, 0));\n        for (int i = 1; i <= m; i++) {\n            for (int j = 1; j <= n; j++) {\n                if (t1[i-1] == t2[j-1])\n                    dp[i][j] = dp[i-1][j-1] + 1;\n                else\n                    dp[i][j] = max(dp[i-1][j], dp[i][j-1]);\n            }\n        }\n        return dp[m][n];\n    }\n};",
+                 "timeComplexity": "O(m * n)", "spaceComplexity": "O(m * n)",
+                 "walkthrough": "Build table bottom-up. dp[i][j] = LCS of t1[0..i-1] and t2[0..j-1]. If chars match: diagonal + 1. Else: max of left or above."
+             },
+             "followUps": ["Print the actual LCS", "Shortest Common Supersequence"],
+             "relatedPatterns": ["Two Strings DP"],
+             "companiesAsked": ["Google", "Amazon", "Microsoft", "Nvidia"]},
+            {"id": "p9.2", "title": "Edit Distance", "difficulty": "medium", "source": "LeetCode #72",
+             "problemStatement": "Given two strings, return minimum operations (insert, delete, replace) to convert word1 to word2.",
+             "examples": [{"input": "word1 = \"horse\", word2 = \"ros\"", "output": "3", "explanation": "horse → rorse → rose → ros"}],
+             "constraints": ["0 <= word1.length, word2.length <= 500"],
+             "hints": ["If chars match, no operation needed", "Otherwise try insert, delete, replace"],
+             "bruteForce": {"approach": "Recursive with all 3 operations", "timeComplexity": "O(3^(m+n))", "spaceComplexity": "O(m+n)"},
+             "optimalSolution": {
+                 "approach": "2D DP",
+                 "intuition": "dp[i][j] = min ops for word1[0..i-1] to word2[0..j-1]. If chars match: dp[i-1][j-1]. Else: 1 + min(insert, delete, replace).",
+                 "code": "class Solution {\npublic:\n    int minDistance(string w1, string w2) {\n        int m = w1.size(), n = w2.size();\n        vector<vector<int>> dp(m+1, vector<int>(n+1));\n        for (int i = 0; i <= m; i++) dp[i][0] = i;\n        for (int j = 0; j <= n; j++) dp[0][j] = j;\n        for (int i = 1; i <= m; i++) {\n            for (int j = 1; j <= n; j++) {\n                if (w1[i-1] == w2[j-1])\n                    dp[i][j] = dp[i-1][j-1];\n                else\n                    dp[i][j] = 1 + min({dp[i-1][j], dp[i][j-1], dp[i-1][j-1]});\n            }\n        }\n        return dp[m][n];\n    }\n};",
+                 "timeComplexity": "O(m * n)", "spaceComplexity": "O(m * n)",
+                 "walkthrough": "Base: converting empty string to length-j string needs j insertions. dp[i-1][j]=delete, dp[i][j-1]=insert, dp[i-1][j-1]=replace."
+             },
+             "followUps": ["One Edit Distance (simpler)", "Minimum ASCII Delete Sum"],
+             "relatedPatterns": ["Two Strings DP"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq9.1", "type": "pattern_match", "question": "Find minimum operations to transform one string to another. Pattern?",
+             "options": ["Sliding Window", "Two Strings DP", "Greedy", "Graph BFS"],
+             "correctAnswer": "Two Strings DP",
+             "explanation": "Edit Distance is the classic Two Strings DP problem. dp[i][j] = min operations for first i chars of s1 to first j chars of s2."},
+            {"id": "cq9.2", "type": "complexity_analysis", "question": "Can 2D DP tables always be optimized to 1D?",
+             "options": ["Yes, always", "Only if each row depends only on the previous row", "Never", "Only for string problems"],
+             "correctAnswer": "Only if each row depends only on the previous row",
+             "explanation": "If dp[i][j] only depends on dp[i-1][...] (previous row), we can use two 1D arrays or even one with careful ordering."}
+        ]
+    }
+
+def ch_graphs():
+    return {
+        "id": 10, "title": "Graphs — BFS & DFS", "slug": "graphs-bfs-dfs",
+        "description": "Connected components, shortest path, topological sort, and cycle detection.",
+        "icon": "🕸️", "difficulty": "intermediate",
+        "patternOverview": "Graphs model relationships. BFS finds shortest paths in unweighted graphs. DFS explores all reachable nodes and detects cycles. Build adjacency list from edges, then traverse.",
+        "whenToUse": ["Finding connected components", "Shortest path (unweighted)", "Detecting cycles", "Topological ordering (DAG)"],
+        "patterns": [
+            {"id": "10.1", "name": "BFS Shortest Path", "description": "BFS guarantees shortest path in unweighted graphs.",
+             "intuition": "BFS explores all nodes at distance d before distance d+1. First time we reach a node, it's via the shortest path.",
+             "template": "queue<int> q;\nq.push(start); visited[start] = true;\nwhile (!q.empty()) {\n    int node = q.front(); q.pop();\n    for (int next : adj[node]) {\n        if (!visited[next]) {\n            visited[next] = true;\n            q.push(next);\n        }\n    }\n}",
+             "timeComplexity": "O(V + E)", "spaceComplexity": "O(V)",
+             "identificationSignals": ["Shortest path unweighted", "Level by level", "Minimum steps", "Word ladder"],
+             "variations": ["Number of Islands", "Word Ladder", "Rotting Oranges"]},
+            {"id": "10.2", "name": "Topological Sort", "description": "Order nodes in a DAG so all edges point forward.",
+             "intuition": "BFS (Kahn's): start with in-degree 0 nodes. Remove them, reduce neighbors' in-degree. Repeat. If all nodes processed, no cycle.",
+             "template": "vector<int> inDeg(n, 0);\nfor (auto& [u, v] : edges) inDeg[v]++;\nqueue<int> q;\nfor (int i = 0; i < n; i++)\n    if (inDeg[i] == 0) q.push(i);\nvector<int> order;\nwhile (!q.empty()) {\n    int node = q.front(); q.pop();\n    order.push_back(node);\n    for (int next : adj[node])\n        if (--inDeg[next] == 0) q.push(next);\n}",
+             "timeComplexity": "O(V + E)", "spaceComplexity": "O(V)",
+             "identificationSignals": ["Prerequisites/dependencies", "Course schedule", "Build order", "DAG ordering"],
+             "variations": ["Course Schedule", "Course Schedule II", "Alien Dictionary"]}
+        ],
+        "problems": [
+            {"id": "p10.1", "title": "Number of Islands", "difficulty": "medium", "source": "LeetCode #200",
+             "problemStatement": "Given a 2D grid of '1's (land) and '0's (water), count the number of islands.",
+             "examples": [{"input": "grid = [[\"1\",\"1\",\"0\"],[\"1\",\"0\",\"0\"],[\"0\",\"0\",\"1\"]]", "output": "2", "explanation": "Two disconnected land masses"}],
+             "constraints": ["1 <= m, n <= 300"],
+             "hints": ["Each island is a connected component", "DFS/BFS from each unvisited land cell"],
+             "bruteForce": {"approach": "Same as optimal", "timeComplexity": "O(m*n)", "spaceComplexity": "O(m*n)"},
+             "optimalSolution": {
+                 "approach": "DFS flood fill",
+                 "intuition": "Iterate grid. When you find a '1', that's a new island. DFS to mark all connected '1's as visited. Count DFS starts.",
+                 "code": "class Solution {\npublic:\n    void dfs(vector<vector<char>>& grid, int i, int j) {\n        if (i < 0 || i >= grid.size() || j < 0 || j >= grid[0].size() || grid[i][j] != '1')\n            return;\n        grid[i][j] = '0'; // mark visited\n        dfs(grid, i+1, j); dfs(grid, i-1, j);\n        dfs(grid, i, j+1); dfs(grid, i, j-1);\n    }\n    int numIslands(vector<vector<char>>& grid) {\n        int count = 0;\n        for (int i = 0; i < grid.size(); i++)\n            for (int j = 0; j < grid[0].size(); j++)\n                if (grid[i][j] == '1') {\n                    count++;\n                    dfs(grid, i, j);\n                }\n        return count;\n    }\n};",
+                 "timeComplexity": "O(m * n)", "spaceComplexity": "O(m * n) recursion stack worst case",
+                 "walkthrough": "Scan grid. Each '1' starts a new island. DFS marks all connected land as visited ('0'). Count how many DFS calls we make."
+             },
+             "followUps": ["Max Area of Island", "Number of Distinct Islands"],
+             "relatedPatterns": ["DFS Flood Fill", "Connected Components"],
+             "companiesAsked": ["Amazon", "Google", "Facebook", "Microsoft", "Nvidia"]},
+            {"id": "p10.2", "title": "Course Schedule", "difficulty": "medium", "source": "LeetCode #207",
+             "problemStatement": "There are numCourses courses with prerequisites. Determine if you can finish all courses.",
+             "examples": [{"input": "numCourses = 2, prerequisites = [[1,0]]", "output": "true", "explanation": "Take course 0 then course 1"}],
+             "constraints": ["1 <= numCourses <= 2000"],
+             "hints": ["Model as directed graph", "Check for cycles using topological sort"],
+             "bruteForce": {"approach": "DFS with cycle detection", "timeComplexity": "O(V+E)", "spaceComplexity": "O(V+E)"},
+             "optimalSolution": {
+                 "approach": "Topological sort (Kahn's BFS)",
+                 "intuition": "Build prerequisite graph. Start with courses having no prerequisites (in-degree 0). Process them, reduce in-degrees. If all courses processed, possible.",
+                 "code": "class Solution {\npublic:\n    bool canFinish(int n, vector<vector<int>>& prereqs) {\n        vector<vector<int>> adj(n);\n        vector<int> inDeg(n, 0);\n        for (auto& p : prereqs) {\n            adj[p[1]].push_back(p[0]);\n            inDeg[p[0]]++;\n        }\n        queue<int> q;\n        for (int i = 0; i < n; i++)\n            if (inDeg[i] == 0) q.push(i);\n        int count = 0;\n        while (!q.empty()) {\n            int course = q.front(); q.pop();\n            count++;\n            for (int next : adj[course])\n                if (--inDeg[next] == 0) q.push(next);\n        }\n        return count == n;\n    }\n};",
+                 "timeComplexity": "O(V + E)", "spaceComplexity": "O(V + E)",
+                 "walkthrough": "Build adjacency list and in-degree array. Start with zero in-degree nodes. Process each, decrement neighbors' in-degree. If count == n, no cycle."
+             },
+             "followUps": ["Course Schedule II (find order)", "Parallel Courses (minimum semesters)"],
+             "relatedPatterns": ["Topological Sort"],
+             "companiesAsked": ["Google", "Amazon", "Microsoft", "Facebook", "Nvidia", "Qualcomm"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq10.1", "type": "pattern_match", "question": "Check if a course schedule is possible (no circular dependencies). Pattern?",
+             "options": ["BFS Shortest Path", "Topological Sort", "Union Find", "DFS Backtracking"],
+             "correctAnswer": "Topological Sort",
+             "explanation": "Course schedule is a DAG problem. Topological sort detects cycles — if not all nodes are processed, a cycle exists."},
+            {"id": "cq10.2", "type": "complexity_analysis", "question": "BFS/DFS on a graph with V vertices and E edges has time complexity:",
+             "options": ["O(V)", "O(E)", "O(V + E)", "O(V * E)"],
+             "correctAnswer": "O(V + E)",
+             "explanation": "We visit each vertex once O(V) and explore each edge once O(E), giving O(V + E) total."}
+        ]
+    }
+
+def ch_backtracking():
+    return {
+        "id": 11, "title": "Backtracking", "slug": "backtracking",
+        "description": "Subsets, permutations, combinations, N-Queens, and constraint satisfaction problems.",
+        "icon": "🔙", "difficulty": "intermediate",
+        "patternOverview": "Backtracking explores all possible solutions by building candidates incrementally and abandoning (backtracking) when constraints are violated. Think of it as DFS on a decision tree.",
+        "whenToUse": ["Generate all valid combinations/permutations", "Constraint satisfaction (Sudoku, N-Queens)", "Find all solutions meeting criteria", "Subset/power set generation"],
+        "patterns": [
+            {"id": "11.1", "name": "Subsets/Combinations", "description": "For each element: include or exclude it. Generates 2^n subsets.",
+             "intuition": "At each position, branch into two paths: take the element or skip it. Base case: reached end of array, add current subset to results.",
+             "template": "void backtrack(int start, vector<int>& curr, vector<int>& nums, vector<vector<int>>& result) {\n    result.push_back(curr);\n    for (int i = start; i < nums.size(); i++) {\n        curr.push_back(nums[i]);\n        backtrack(i + 1, curr, nums, result);\n        curr.pop_back(); // backtrack\n    }\n}",
+             "timeComplexity": "O(2^n)", "spaceComplexity": "O(n) recursion depth",
+             "identificationSignals": ["Generate all subsets", "All combinations of size k", "Power set", "Sum combinations"],
+             "variations": ["Subsets", "Subsets II (with duplicates)", "Combination Sum", "Combinations"]}
+        ],
+        "problems": [
+            {"id": "p11.1", "title": "Subsets", "difficulty": "medium", "source": "LeetCode #78",
+             "problemStatement": "Given an integer array nums of unique elements, return all possible subsets.",
+             "examples": [{"input": "nums = [1,2,3]", "output": "[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]", "explanation": "All 2^3 = 8 subsets"}],
+             "constraints": ["1 <= nums.length <= 10", "All elements unique"],
+             "hints": ["For each element: include or exclude", "Or iterate and add to existing subsets"],
+             "bruteForce": {"approach": "Same as optimal for this problem", "timeComplexity": "O(2^n)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Backtracking",
+                 "intuition": "At each index, decide to include or exclude the current element. This generates all 2^n combinations.",
+                 "code": "class Solution {\npublic:\n    vector<vector<int>> result;\n    void backtrack(int start, vector<int>& curr, vector<int>& nums) {\n        result.push_back(curr);\n        for (int i = start; i < nums.size(); i++) {\n            curr.push_back(nums[i]);\n            backtrack(i + 1, curr, nums);\n            curr.pop_back();\n        }\n    }\n    vector<vector<int>> subsets(vector<int>& nums) {\n        vector<int> curr;\n        backtrack(0, curr, nums);\n        return result;\n    }\n};",
+                 "timeComplexity": "O(n * 2^n)", "spaceComplexity": "O(n)",
+                 "walkthrough": "Start with empty set. At each level, try adding each remaining element. After recursion, remove last element (backtrack). Every intermediate state is a valid subset."
+             },
+             "followUps": ["Subsets II with duplicates", "Permutations"],
+             "relatedPatterns": ["Subsets/Combinations"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Microsoft"]},
+            {"id": "p11.2", "title": "Permutations", "difficulty": "medium", "source": "LeetCode #46",
+             "problemStatement": "Given an array of distinct integers, return all possible permutations.",
+             "examples": [{"input": "nums = [1,2,3]", "output": "[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]", "explanation": "All 3! = 6 permutations"}],
+             "constraints": ["1 <= nums.length <= 6"],
+             "hints": ["Use a boolean visited array", "Or swap elements"],
+             "bruteForce": {"approach": "Same as optimal", "timeComplexity": "O(n!)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Backtracking with visited array",
+                 "intuition": "At each position, try every unused element. Mark as used, recurse, then unmark (backtrack).",
+                 "code": "class Solution {\npublic:\n    vector<vector<int>> result;\n    void backtrack(vector<int>& nums, vector<int>& curr, vector<bool>& used) {\n        if (curr.size() == nums.size()) {\n            result.push_back(curr);\n            return;\n        }\n        for (int i = 0; i < nums.size(); i++) {\n            if (used[i]) continue;\n            used[i] = true;\n            curr.push_back(nums[i]);\n            backtrack(nums, curr, used);\n            curr.pop_back();\n            used[i] = false;\n        }\n    }\n    vector<vector<int>> permute(vector<int>& nums) {\n        vector<int> curr;\n        vector<bool> used(nums.size(), false);\n        backtrack(nums, curr, used);\n        return result;\n    }\n};",
+                 "timeComplexity": "O(n * n!)", "spaceComplexity": "O(n)",
+                 "walkthrough": "At each level, try all unused elements. When permutation is complete (size == n), add to results. Backtrack by removing and unmarking."
+             },
+             "followUps": ["Permutations II (with duplicates)", "Next Permutation"],
+             "relatedPatterns": ["Backtracking"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Microsoft", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq11.1", "type": "complexity_analysis", "question": "How many subsets does an array of n elements have?",
+             "options": ["n", "n!", "2^n", "n^2"],
+             "correctAnswer": "2^n",
+             "explanation": "Each element is either included or excluded: 2 choices per element = 2^n total subsets."},
+            {"id": "cq11.2", "type": "pattern_match", "question": "Generate all valid arrangements of n queens on n×n board. Pattern?",
+             "options": ["Dynamic Programming", "Greedy", "Backtracking", "Binary Search"],
+             "correctAnswer": "Backtracking",
+             "explanation": "Place queens row by row. At each row, try each column. If valid (no conflicts), recurse. Otherwise backtrack."}
+        ]
+    }
+
+def ch_greedy():
+    return {
+        "id": 12, "title": "Greedy Algorithms", "slug": "greedy",
+        "description": "Interval scheduling, jump game, and local-optimal-leads-to-global-optimal patterns.",
+        "icon": "💰", "difficulty": "intermediate",
+        "patternOverview": "Greedy makes the locally optimal choice at each step, hoping to find the global optimum. Works when the problem has the greedy choice property and optimal substructure.",
+        "whenToUse": ["Interval scheduling/merging", "Activity selection", "Jump/reach problems", "Minimum operations with clear greedy choice"],
+        "patterns": [
+            {"id": "12.1", "name": "Interval Scheduling", "description": "Sort intervals and process greedily.",
+             "intuition": "For merge: sort by start, merge overlapping. For max non-overlapping: sort by end, pick earliest finishing.",
+             "template": "sort(intervals.begin(), intervals.end());\nvector<vector<int>> merged;\nfor (auto& iv : intervals) {\n    if (merged.empty() || merged.back()[1] < iv[0])\n        merged.push_back(iv);\n    else\n        merged.back()[1] = max(merged.back()[1], iv[1]);\n}",
+             "timeComplexity": "O(n log n)", "spaceComplexity": "O(n)",
+             "identificationSignals": ["Merge overlapping intervals", "Maximum non-overlapping intervals", "Meeting rooms", "Minimum platforms"],
+             "variations": ["Merge Intervals", "Non-overlapping Intervals", "Meeting Rooms II"]}
+        ],
+        "problems": [
+            {"id": "p12.1", "title": "Merge Intervals", "difficulty": "medium", "source": "LeetCode #56",
+             "problemStatement": "Given an array of intervals, merge all overlapping intervals.",
+             "examples": [{"input": "intervals = [[1,3],[2,6],[8,10],[15,18]]", "output": "[[1,6],[8,10],[15,18]]", "explanation": "[1,3] and [2,6] overlap, merged to [1,6]"}],
+             "constraints": ["1 <= intervals.length <= 10^4"],
+             "hints": ["Sort by start time", "Check if current overlaps with last merged"],
+             "bruteForce": {"approach": "Compare all pairs", "timeComplexity": "O(n²)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Sort + linear scan",
+                 "intuition": "Sort by start. If current interval overlaps with last merged (start <= last.end), extend last. Otherwise, add new.",
+                 "code": "class Solution {\npublic:\n    vector<vector<int>> merge(vector<vector<int>>& intervals) {\n        sort(intervals.begin(), intervals.end());\n        vector<vector<int>> result;\n        for (auto& iv : intervals) {\n            if (result.empty() || result.back()[1] < iv[0]) {\n                result.push_back(iv);\n            } else {\n                result.back()[1] = max(result.back()[1], iv[1]);\n            }\n        }\n        return result;\n    }\n};",
+                 "timeComplexity": "O(n log n)", "spaceComplexity": "O(n)",
+                 "walkthrough": "Sort intervals by start time. For each interval: if it doesn't overlap with the last merged interval, add it. Otherwise, extend the last merged interval's end."
+             },
+             "followUps": ["Insert Interval", "Non-overlapping Intervals", "Meeting Rooms II"],
+             "relatedPatterns": ["Interval Scheduling"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Microsoft", "Nvidia", "Arista Networks"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq12.1", "type": "pattern_match", "question": "Maximize number of non-overlapping intervals. Sort by?",
+             "options": ["Start time", "End time", "Duration", "Interval length"],
+             "correctAnswer": "End time",
+             "explanation": "Sort by end time, pick earliest finishing interval. This leaves maximum room for remaining intervals (Activity Selection)."},
+            {"id": "cq12.2", "type": "approach_selection", "question": "How do you know when greedy works vs when DP is needed?",
+             "options": ["Greedy always works", "DP always works", "Greedy works when locally optimal choice is globally optimal", "They're interchangeable"],
+             "correctAnswer": "Greedy works when locally optimal choice is globally optimal",
+             "explanation": "Greedy requires the greedy choice property. If choices interact in complex ways (e.g., 0/1 knapsack), DP is needed."}
+        ]
+    }
+
+def ch_bit_problems():
+    return {
+        "id": 13, "title": "Bit Manipulation Problems", "slug": "bit-problems",
+        "description": "XOR tricks, counting bits, and bitmask-based problem solving.",
+        "icon": "🔢", "difficulty": "intermediate",
+        "patternOverview": "Bit manipulation problems exploit properties of XOR (a^a=0, a^0=a), bit counting, and bitmask representation of sets.",
+        "whenToUse": ["Find unique element among duplicates", "Count set bits", "Generate subsets", "Toggle/check states efficiently"],
+        "patterns": [
+            {"id": "13.1", "name": "XOR Tricks", "description": "XOR cancels duplicates (a^a=0) and is its own inverse.",
+             "intuition": "XOR all elements: duplicates cancel out, leaving the unique element. Works for finding single numbers in duplicate arrays.",
+             "template": "int result = 0;\nfor (int num : nums) result ^= num;\n// result = the unique element",
+             "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Find element appearing once when others appear twice", "Missing number", "Swap without temp"],
+             "variations": ["Single Number", "Single Number II", "Missing Number"]}
+        ],
+        "problems": [
+            {"id": "p13.1", "title": "Single Number", "difficulty": "easy", "source": "LeetCode #136",
+             "problemStatement": "Every element appears twice except one. Find the single element.",
+             "examples": [{"input": "nums = [2,2,1]", "output": "1", "explanation": "1 appears once"}],
+             "constraints": ["Must be O(1) space"],
+             "hints": ["XOR of a number with itself is 0"],
+             "bruteForce": {"approach": "Hash map counting", "timeComplexity": "O(n)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "XOR all elements",
+                 "intuition": "a^a=0, a^0=a. XOR all elements: pairs cancel, unique element remains.",
+                 "code": "class Solution {\npublic:\n    int singleNumber(vector<int>& nums) {\n        int result = 0;\n        for (int num : nums) result ^= num;\n        return result;\n    }\n};",
+                 "timeComplexity": "O(n)", "spaceComplexity": "O(1)",
+                 "walkthrough": "XOR all elements together. Since x^x=0 and x^0=x, all paired elements cancel out, leaving the single element."
+             },
+             "followUps": ["Single Number II (appears three times)", "Single Number III (two unique elements)"],
+             "relatedPatterns": ["XOR Tricks"],
+             "companiesAsked": ["Google", "Amazon", "Microsoft"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq13.1", "type": "code_output", "question": "What is the result of: 5 ^ 3 ^ 5?",
+             "options": ["0", "3", "5", "8"],
+             "correctAnswer": "3",
+             "explanation": "5^5=0, 0^3=3. XOR is commutative and associative, and a^a=0."}
+        ]
+    }
+
+def ch_string_algo():
+    return {
+        "id": 14, "title": "String Algorithms", "slug": "string-algorithms",
+        "description": "Pattern matching (KMP), palindromes, and anagram-based problems.",
+        "icon": "📝", "difficulty": "advanced",
+        "patternOverview": "String problems involve pattern matching, palindrome detection, and character manipulation. KMP avoids redundant comparisons. Expand-around-center finds palindromes efficiently.",
+        "whenToUse": ["Pattern matching in text", "Finding palindromic substrings", "String transformation/comparison"],
+        "patterns": [
+            {"id": "14.1", "name": "Expand Around Center", "description": "For palindromes: expand from each center position outward.",
+             "intuition": "Each palindrome has a center (single char for odd length, between two chars for even). Try each center, expand while characters match.",
+             "template": "int expandAroundCenter(string& s, int left, int right) {\n    while (left >= 0 && right < s.size() && s[left] == s[right]) {\n        left--; right++;\n    }\n    return right - left - 1;\n}",
+             "timeComplexity": "O(n²)", "spaceComplexity": "O(1)",
+             "identificationSignals": ["Longest palindromic substring", "Count palindromic substrings", "Palindrome check"],
+             "variations": ["Longest Palindromic Substring", "Palindromic Substrings"]}
+        ],
+        "problems": [
+            {"id": "p14.1", "title": "Longest Palindromic Substring", "difficulty": "medium", "source": "LeetCode #5",
+             "problemStatement": "Given a string s, return the longest palindromic substring.",
+             "examples": [{"input": "s = \"babad\"", "output": "\"bab\" or \"aba\"", "explanation": "Both are valid length-3 palindromes"}],
+             "constraints": ["1 <= s.length <= 1000"],
+             "hints": ["Expand around each center", "Consider both odd and even length palindromes"],
+             "bruteForce": {"approach": "Check all substrings", "timeComplexity": "O(n³)", "spaceComplexity": "O(1)"},
+             "optimalSolution": {
+                 "approach": "Expand around center",
+                 "intuition": "Try each index as center of odd-length palindrome and each pair as center of even-length. Expand outward while chars match.",
+                 "code": "class Solution {\npublic:\n    string longestPalindrome(string s) {\n        int start = 0, maxLen = 1;\n        for (int i = 0; i < s.size(); i++) {\n            // Odd length\n            int l = i, r = i;\n            while (l >= 0 && r < s.size() && s[l] == s[r]) { l--; r++; }\n            if (r - l - 1 > maxLen) { maxLen = r-l-1; start = l+1; }\n            // Even length\n            l = i; r = i + 1;\n            while (l >= 0 && r < s.size() && s[l] == s[r]) { l--; r++; }\n            if (r - l - 1 > maxLen) { maxLen = r-l-1; start = l+1; }\n        }\n        return s.substr(start, maxLen);\n    }\n};",
+                 "timeComplexity": "O(n²)", "spaceComplexity": "O(1)",
+                 "walkthrough": "For each index, expand outward for both odd and even length palindromes. Track longest found."
+             },
+             "followUps": ["Manacher's algorithm O(n)", "Palindromic Substrings (count)"],
+             "relatedPatterns": ["Expand Around Center"],
+             "companiesAsked": ["Amazon", "Google", "Microsoft", "Facebook"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq14.1", "type": "complexity_analysis", "question": "What is the time complexity of KMP pattern matching?",
+             "options": ["O(n*m)", "O(n+m)", "O(n log m)", "O(n²)"],
+             "correctAnswer": "O(n+m)",
+             "explanation": "KMP preprocesses the pattern in O(m) and searches in O(n), where n = text length and m = pattern length."}
+        ]
+    }
+
+def ch_heap():
+    return {
+        "id": 15, "title": "Heap / Priority Queue", "slug": "heap",
+        "description": "Top-K elements, merge K sorted, median finder, and scheduling problems.",
+        "icon": "⛰️", "difficulty": "intermediate",
+        "patternOverview": "Heaps efficiently track min/max elements. Min-heap for 'top K largest' (keep K elements, reject smaller). Max-heap for 'top K smallest'. Two heaps for running median.",
+        "whenToUse": ["Kth largest/smallest element", "Merge K sorted lists/arrays", "Running median", "Task scheduling with priorities"],
+        "patterns": [
+            {"id": "15.1", "name": "Top-K Pattern", "description": "Use min-heap of size K to find K largest elements.",
+             "intuition": "Maintain a min-heap of size K. For each new element: if larger than heap top, replace. Heap always contains K largest seen so far.",
+             "template": "priority_queue<int, vector<int>, greater<int>> minHeap;\nfor (int num : nums) {\n    minHeap.push(num);\n    if (minHeap.size() > k) minHeap.pop();\n}\n// minHeap.top() = kth largest",
+             "timeComplexity": "O(n log k)", "spaceComplexity": "O(k)",
+             "identificationSignals": ["Kth largest/smallest", "Top K frequent", "K closest points"],
+             "variations": ["Kth Largest Element", "Top K Frequent", "K Closest Points to Origin"]}
+        ],
+        "problems": [
+            {"id": "p15.1", "title": "Kth Largest Element in an Array", "difficulty": "medium", "source": "LeetCode #215",
+             "problemStatement": "Given an integer array nums and an integer k, return the kth largest element.",
+             "examples": [{"input": "nums = [3,2,1,5,6,4], k = 2", "output": "5", "explanation": "Sorted: [1,2,3,4,5,6], 2nd largest = 5"}],
+             "constraints": ["1 <= k <= nums.length <= 10^5"],
+             "hints": ["Min-heap of size k", "Or use quickselect for average O(n)"],
+             "bruteForce": {"approach": "Sort and return nums[n-k]", "timeComplexity": "O(n log n)", "spaceComplexity": "O(1)"},
+             "optimalSolution": {
+                 "approach": "Min-heap of size K",
+                 "intuition": "Maintain min-heap of size k. After processing all elements, top of heap is kth largest.",
+                 "code": "class Solution {\npublic:\n    int findKthLargest(vector<int>& nums, int k) {\n        priority_queue<int, vector<int>, greater<int>> minHeap;\n        for (int num : nums) {\n            minHeap.push(num);\n            if (minHeap.size() > k) minHeap.pop();\n        }\n        return minHeap.top();\n    }\n};",
+                 "timeComplexity": "O(n log k)", "spaceComplexity": "O(k)",
+                 "walkthrough": "Push each element into min-heap. If heap size exceeds k, pop smallest. After all elements, heap contains k largest. Top = kth largest."
+             },
+             "followUps": ["Quickselect O(n) average", "Median of a stream"],
+             "relatedPatterns": ["Top-K Pattern"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Nvidia", "Qualcomm"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq15.1", "type": "approach_selection", "question": "To find the Kth largest, should you use a min-heap or max-heap of size K?",
+             "options": ["Min-heap", "Max-heap", "Either works", "Neither, use sorting"],
+             "correctAnswer": "Min-heap",
+             "explanation": "Min-heap of size K: top element is the smallest of the K largest = Kth largest. When a larger element comes, the Kth largest naturally floats down."}
+        ]
+    }
+
+def ch_union_find():
+    return {
+        "id": 16, "title": "Union Find / Disjoint Set", "slug": "union-find",
+        "description": "Connected components, redundant connection, and dynamic connectivity problems.",
+        "icon": "🔗", "difficulty": "advanced",
+        "patternOverview": "Union-Find efficiently tracks connected components with near O(1) union and find operations using path compression and union by rank.",
+        "whenToUse": ["Dynamic connectivity queries", "Connected components in graph", "Detect cycles in undirected graph", "Kruskal's MST"],
+        "patterns": [
+            {"id": "16.1", "name": "Union-Find with Path Compression", "description": "Track disjoint sets with efficient union and find.",
+             "intuition": "Each element points to a parent. Find follows parents to root (with path compression). Union merges two roots (by rank for balance).",
+             "template": "class UnionFind {\n    vector<int> parent, rank;\npublic:\n    UnionFind(int n) : parent(n), rank(n, 0) {\n        iota(parent.begin(), parent.end(), 0);\n    }\n    int find(int x) {\n        if (parent[x] != x) parent[x] = find(parent[x]);\n        return parent[x];\n    }\n    bool unite(int x, int y) {\n        int px = find(x), py = find(y);\n        if (px == py) return false;\n        if (rank[px] < rank[py]) swap(px, py);\n        parent[py] = px;\n        if (rank[px] == rank[py]) rank[px]++;\n        return true;\n    }\n};",
+             "timeComplexity": "O(α(n)) ≈ O(1) amortized per operation", "spaceComplexity": "O(n)",
+             "identificationSignals": ["Connected components", "Redundant connection", "Accounts merge", "Number of provinces"],
+             "variations": ["Number of Connected Components", "Redundant Connection", "Accounts Merge"]}
+        ],
+        "problems": [
+            {"id": "p16.1", "title": "Number of Provinces", "difficulty": "medium", "source": "LeetCode #547",
+             "problemStatement": "Given n cities and a connectivity matrix, find the number of provinces (connected components).",
+             "examples": [{"input": "isConnected = [[1,1,0],[1,1,0],[0,0,1]]", "output": "2", "explanation": "Cities 0,1 connected; city 2 alone"}],
+             "constraints": ["1 <= n <= 200"],
+             "hints": ["Union cities that are connected", "Count distinct roots"],
+             "bruteForce": {"approach": "DFS from each unvisited city", "timeComplexity": "O(n²)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "Union-Find",
+                 "intuition": "Union all connected pairs. Count distinct roots = number of provinces.",
+                 "code": "class Solution {\npublic:\n    vector<int> parent;\n    int find(int x) {\n        if (parent[x] != x) parent[x] = find(parent[x]);\n        return parent[x];\n    }\n    int findCircleNum(vector<vector<int>>& isConnected) {\n        int n = isConnected.size();\n        parent.resize(n);\n        iota(parent.begin(), parent.end(), 0);\n        for (int i = 0; i < n; i++)\n            for (int j = i+1; j < n; j++)\n                if (isConnected[i][j])\n                    parent[find(i)] = find(j);\n        int count = 0;\n        for (int i = 0; i < n; i++)\n            if (find(i) == i) count++;\n        return count;\n    }\n};",
+                 "timeComplexity": "O(n² * α(n))", "spaceComplexity": "O(n)",
+                 "walkthrough": "Initialize each city as its own component. Union connected pairs. Count nodes that are their own root = number of components."
+             },
+             "followUps": ["Redundant Connection", "Accounts Merge"],
+             "relatedPatterns": ["Union-Find"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Nvidia"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq16.1", "type": "complexity_analysis", "question": "What is the amortized time complexity of Union-Find with path compression and union by rank?",
+             "options": ["O(1)", "O(log n)", "O(α(n)) ≈ O(1)", "O(n)"],
+             "correctAnswer": "O(α(n)) ≈ O(1)",
+             "explanation": "α(n) is the inverse Ackermann function, which is effectively constant (< 5) for all practical input sizes."}
+        ]
+    }
+
+def ch_system_design_coding():
+    return {
+        "id": 17, "title": "Design Problems in Coding Rounds", "slug": "design-coding",
+        "description": "LRU Cache, HashMap design, and iterator patterns for senior-level coding rounds.",
+        "icon": "🏗️", "difficulty": "advanced",
+        "patternOverview": "Senior interviews include design problems in coding rounds: implement data structures with specific time complexity guarantees. These test both coding skill and system design intuition.",
+        "whenToUse": ["Design cache with eviction", "Implement data structure from scratch", "Iterator pattern", "Rate limiter / Hit counter"],
+        "patterns": [
+            {"id": "17.1", "name": "Hash Map + Doubly Linked List", "description": "Combine O(1) lookup with O(1) ordered operations.",
+             "intuition": "Hash map gives O(1) access by key. Doubly linked list maintains order (LRU = least recently used at tail). Map values point to list nodes.",
+             "template": "unordered_map<int, list<pair<int,int>>::iterator> map;\nlist<pair<int,int>> cache; // front = most recent\n// Get: lookup in map, move to front\n// Put: insert at front, evict from back if full",
+             "timeComplexity": "O(1) for get and put", "spaceComplexity": "O(capacity)",
+             "identificationSignals": ["LRU Cache", "LFU Cache", "Ordered map with O(1) operations"],
+             "variations": ["LRU Cache", "LFU Cache", "All O(1) Data Structure"]}
+        ],
+        "problems": [
+            {"id": "p17.1", "title": "LRU Cache", "difficulty": "medium", "source": "LeetCode #146",
+             "problemStatement": "Design a data structure for Least Recently Used (LRU) cache with O(1) get and put.",
+             "examples": [{"input": "LRUCache(2), put(1,1), put(2,2), get(1)->1, put(3,3), get(2)->-1", "output": "get(1)=1, get(2)=-1", "explanation": "After putting 3, key 2 was evicted (least recently used)"}],
+             "constraints": ["1 <= capacity <= 3000", "0 <= key, value <= 10^4"],
+             "hints": ["HashMap for O(1) lookup", "Doubly linked list for O(1) reorder"],
+             "bruteForce": {"approach": "Array with timestamps", "timeComplexity": "O(n)", "spaceComplexity": "O(n)"},
+             "optimalSolution": {
+                 "approach": "HashMap + Doubly Linked List",
+                 "intuition": "Map stores key -> list node. List maintains usage order. On access: move to front. On eviction: remove from back.",
+                 "code": "class LRUCache {\n    int cap;\n    list<pair<int,int>> cache; // front = most recent\n    unordered_map<int, list<pair<int,int>>::iterator> map;\npublic:\n    LRUCache(int capacity) : cap(capacity) {}\n    \n    int get(int key) {\n        if (!map.count(key)) return -1;\n        // Move to front (most recent)\n        cache.splice(cache.begin(), cache, map[key]);\n        return map[key]->second;\n    }\n    \n    void put(int key, int value) {\n        if (map.count(key)) {\n            map[key]->second = value;\n            cache.splice(cache.begin(), cache, map[key]);\n            return;\n        }\n        if (cache.size() == cap) {\n            // Evict LRU (back of list)\n            int evictKey = cache.back().first;\n            cache.pop_back();\n            map.erase(evictKey);\n        }\n        cache.push_front({key, value});\n        map[key] = cache.begin();\n    }\n};",
+                 "timeComplexity": "O(1) for both get and put", "spaceComplexity": "O(capacity)",
+                 "walkthrough": "get: lookup in map, move node to front of list (splice). put: if exists, update and move to front. If new and full, evict back of list. Insert at front."
+             },
+             "followUps": ["LFU Cache (harder)", "Design TTL Cache"],
+             "relatedPatterns": ["Hash Map + Doubly Linked List"],
+             "companiesAsked": ["Google", "Amazon", "Facebook", "Microsoft", "Nvidia", "Arista Networks", "Qualcomm"]}
+        ],
+        "chapterQuiz": [
+            {"id": "cq17.1", "type": "approach_selection", "question": "Why does LRU Cache use a doubly linked list instead of singly linked?",
+             "options": ["Doubly linked is faster", "Need O(1) removal of any node", "Singly linked can't store data", "Standard library requires it"],
+             "correctAnswer": "Need O(1) removal of any node",
+             "explanation": "Removing a node from a singly linked list requires O(n) to find the previous node. Doubly linked list has prev pointer for O(1) removal."}
+        ]
+    }
+
+
+def build_interview_patterns():
+    data = {
+        "metadata": {
+            "title": "Coding Interview Patterns & Practice Problems",
+            "description": "Comprehensive guide to all major coding interview patterns with C++ solutions. Covers arrays, trees, graphs, DP, and design problems for senior engineer positions at Nvidia, Google, Qualcomm, Ericsson, and Arista Networks.",
+            "version": "1.0",
+            "targetAudience": "Senior Software Engineers (5+ years) preparing for big tech coding interviews",
+            "targetCompanies": ["Nvidia", "Google", "Qualcomm", "Ericsson", "Arista Networks", "Nokia", "Samsung", "Intel", "AMD", "Apple"],
+            "totalChapters": 17,
+            "generatedDate": "2026-06-23",
+            "features": ["Pattern explanations", "Code templates", "Complete C++ solutions", "Complexity analysis", "Company tags", "Quiz questions"]
+        },
+        "chapters": [
+            ch_arrays_hashing(),
+            ch_two_pointers(),
+            ch_sliding_window(),
+            ch_binary_search(),
+            ch_stack(),
+            ch_linked_list(),
+            ch_trees(),
+            ch_dp_1d(),
+            ch_dp_2d(),
+            ch_graphs(),
+            ch_backtracking(),
+            ch_greedy(),
+            ch_bit_problems(),
+            ch_string_algo(),
+            ch_heap(),
+            ch_union_find(),
+            ch_system_design_coding()
+        ]
+    }
+    return data
+
+
+if __name__ == "__main__":
+    data = build_interview_patterns()
+    output_path = os.path.join(r"C:\GitHub\Focus", "interview_patterns.json")
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    total_patterns = sum(len(ch.get("patterns", [])) for ch in data["chapters"])
+    total_problems = sum(len(ch.get("problems", [])) for ch in data["chapters"])
+    total_quizzes = sum(len(ch.get("chapterQuiz", [])) for ch in data["chapters"])
+    print(f"Generated {output_path}")
+    print(f"  Chapters: {len(data['chapters'])}")
+    print(f"  Patterns: {total_patterns}")
+    print(f"  Problems: {total_problems}")
+    print(f"  Quiz Questions: {total_quizzes}")
