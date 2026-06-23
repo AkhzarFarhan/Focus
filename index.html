@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ & Coding Interview Masterclass</title>
+    
+    <!-- Meta Descriptions for SEO -->
+    <meta name="description" content="An interactive preparation dashboard for C/C++ concepts, memory management, bit manipulation, and system design patterns for Nvidia, Google, Qualcomm, and Ericsson interviews.">
+    <meta name="keywords" content="C++, Pointer, Memory Management, Bit Manipulation, Coding Patterns, LeetCode, Nvidia, Google, Qualcomm, System Programming">
+    <meta name="author" content="Samsung R&D Engineer">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Prism.js Code Highlighting & Clipboard -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
+
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+    <!-- Top Progress & Notification Bar -->
+    <div class="top-nav-bar">
+        <div class="brand">
+            <span class="logo-icon">⚡</span>
+            <div class="brand-text">
+                <h1>C++ & Coding Prep</h1>
+                <span class="sub-logo">Samsung R&D Interview Hub</span>
+            </div>
+        </div>
+
+        <div class="view-toggle-container">
+            <button id="toggle-concepts" class="toggle-btn active" onclick="switchView('concepts')">
+                <i data-lucide="book-open"></i> <span>C/C++ Concepts</span>
+            </button>
+            <button id="toggle-patterns" class="toggle-btn" onclick="switchView('patterns')">
+                <i data-lucide="code-2"></i> <span>Interview Patterns</span>
+            </button>
+        </div>
+
+        <div class="search-container">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="global-search" placeholder="Search topics, problems, or companies..." oninput="handleSearch(this.value)">
+            <button id="clear-search" class="clear-btn" onclick="clearSearch()" style="display: none;">&times;</button>
+        </div>
+
+        <div class="global-progress-card">
+            <div class="progress-info">
+                <span class="progress-label">Total Completion</span>
+                <span id="overall-progress-text" class="progress-val">0%</span>
+            </div>
+            <div class="progress-track-bg">
+                <div id="overall-progress-bar" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Trigger -->
+        <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Toggle Navigation Menu">
+            <i data-lucide="menu" id="menu-icon-open"></i>
+            <i data-lucide="x" id="menu-icon-close" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Main Workspace Container -->
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="app-sidebar">
+            <div class="sidebar-header">
+                <h2 id="sidebar-title">Chapters</h2>
+                <button class="reset-progress-btn" onclick="resetProgress()" title="Reset Local Progress">
+                    <i data-lucide="rotate-ccw"></i> Reset
+                </button>
+            </div>
+            <nav class="chapter-list" id="chapters-nav-list">
+                <!-- Dynamically populated chapters -->
+                <div class="skeleton-loader" style="height: 50px; margin-bottom: 10px;"></div>
+                <div class="skeleton-loader" style="height: 50px; margin-bottom: 10px;"></div>
+                <div class="skeleton-loader" style="height: 50px;"></div>
+            </nav>
+        </aside>
+
+        <!-- Sidebar Overlay (Mobile) -->
+        <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <!-- Main Content Viewport -->
+        <main class="content-viewport" id="main-content">
+            <!-- Dynamic content loaded here -->
+            <div id="dashboard-view" class="view-section active">
+                <!-- Welcome / Dashboard Overview -->
+                <div class="dashboard-hero">
+                    <div class="hero-left">
+                        <span class="hero-tag">Welcome back, Senior Engineer</span>
+                        <h2>Let's build back your coding muscle memory.</h2>
+                        <p>A specialized, exhaustive curriculum tailored for C/C++ systems engineering, high-performance computing, and pattern decoding. Target companies: <strong>Nvidia, Qualcomm, Google, Arista, Ericsson</strong>.</p>
+                        
+                        <div class="quick-stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon concepts-color"><i data-lucide="book-marked"></i></div>
+                                <div class="stat-info">
+                                    <h3 id="stat-concepts-read">0/0</h3>
+                                    <span>Concepts Read</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon problems-color"><i data-lucide="check-circle-2"></i></div>
+                                <div class="stat-info">
+                                    <h3 id="stat-problems-solved">0/0</h3>
+                                    <span>Problems Solved</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon quizzes-color"><i data-lucide="award"></i></div>
+                                <div class="stat-info">
+                                    <h3 id="stat-quizzes-passed">0/0</h3>
+                                    <span>Quizzes Cleared</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hero-right">
+                        <div class="companies-card">
+                            <h3>Target Company Profiles</h3>
+                            <div class="company-badge-grid">
+                                <span class="comp-badge nvidia">Nvidia</span>
+                                <span class="comp-badge google">Google</span>
+                                <span class="comp-badge qualcomm">Qualcomm</span>
+                                <span class="comp-badge arista">Arista</span>
+                                <span class="comp-badge ericsson">Ericsson</span>
+                                <span class="comp-badge samsung">Samsung</span>
+                                <span class="comp-badge amd">AMD</span>
+                                <span class="comp-badge apple">Apple</span>
+                            </div>
+                            <div class="pro-tips">
+                                <h4>💡 Interview Focus Guidelines:</h4>
+                                <ul>
+                                    <li><strong>Nvidia/Qualcomm:</strong> Pointers, memory layout, volatile, custom allocators, bitwise ops, thread safety, vectorization.</li>
+                                    <li><strong>Arista/Ericsson:</strong> IPC, socket programming, pointer manipulation, state machine design, caching mechanisms.</li>
+                                    <li><strong>Google:</strong> Algorithms, robust STL utilization, complex tree/graph traversal, and clean templates.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Learning Path Grid -->
+                <div class="dashboard-sections">
+                    <div class="path-card">
+                        <div class="path-header">
+                            <i data-lucide="graduation-cap"></i>
+                            <div>
+                                <h3>C/C++ Systems Path</h3>
+                                <p>Deep dive into language mechanics and hardware-level operations.</p>
+                            </div>
+                        </div>
+                        <ul class="path-steps" id="concepts-path-steps">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+
+                    <div class="path-card">
+                        <div class="path-header">
+                            <i data-lucide="terminal"></i>
+                            <div>
+                                <h3>Coding Patterns Path</h3>
+                                <p>Learn structural patterns to decode any complex algorithmic problem.</p>
+                            </div>
+                        </div>
+                        <ul class="path-steps" id="patterns-path-steps">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chapter Content View -->
+            <div id="chapter-view" class="view-section" style="display: none;">
+                <!-- Chapter Header -->
+                <header class="chapter-header-card">
+                    <div class="chapter-meta">
+                        <span id="chapter-difficulty-badge" class="difficulty-badge">Intermediate</span>
+                        <span class="chapter-index">Chapter <span id="chapter-number-val">1</span></span>
+                    </div>
+                    <div class="chapter-title-row">
+                        <h2 id="chapter-title-text"><span id="chapter-emoji">🎯</span> Pointer Fundamentals</h2>
+                        <div class="chapter-progress-toggle">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="chapter-complete-checkbox" onchange="toggleChapterCompletion(this.checked)">
+                                <span class="checkmark"></span>
+                                <span class="check-label">Mark Chapter Complete</span>
+                            </label>
+                        </div>
+                    </div>
+                    <p id="chapter-description-text" class="chapter-desc">Master raw pointers, pointer arithmetic, function pointers, and common pointer pitfalls in C/C++.</p>
+                    
+                    <!-- Pattern Overview for interview patterns (hidden for concepts) -->
+                    <div id="pattern-overview-container" class="pattern-overview-box" style="display: none;">
+                        <h3><i data-lucide="help-circle"></i> Pattern Overview</h3>
+                        <div id="pattern-overview-text"></div>
+                        <div class="when-to-use-box">
+                            <h4>When to Use:</h4>
+                            <ul id="pattern-when-to-use-list"></ul>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Navigation Tabs inside Chapter -->
+                <div class="chapter-tabs-bar">
+                    <button class="chapter-tab active" id="tab-learn" onclick="switchChapterTab('learn')">
+                        <i data-lucide="book-open"></i> Learn Concepts
+                    </button>
+                    <button class="chapter-tab" id="tab-problems" onclick="switchChapterTab('problems')" style="display: none;">
+                        <i data-lucide="code-2"></i> Coding Problems
+                    </button>
+                    <button class="chapter-tab" id="tab-quiz" onclick="switchChapterTab('quiz')">
+                        <i data-lucide="award"></i> Chapter Quiz
+                    </button>
+                </div>
+
+                <!-- Tab Panels -->
+                <div class="tab-panels-viewport">
+                    <!-- Learn Panel -->
+                    <div id="panel-learn" class="tab-panel active">
+                        <div id="topics-container" class="topics-stack">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Problems Panel -->
+                    <div id="panel-problems" class="tab-panel" style="display: none;">
+                        <div id="patterns-subcontainer" class="patterns-inner-stack">
+                            <!-- Patterns templates -->
+                        </div>
+                        <div id="problems-container" class="problems-stack">
+                            <!-- Coding problems -->
+                        </div>
+                    </div>
+
+                    <!-- Quiz Panel -->
+                    <div id="panel-quiz" class="tab-panel" style="display: none;">
+                        <div class="quiz-intro-card">
+                            <h3>Chapter Assessment</h3>
+                            <p>Test your understanding of the concepts introduced in this chapter. Grades are saved locally to track your preparation progress.</p>
+                            <div class="quiz-stats-summary">
+                                <div class="q-stat"><span class="q-label">Total Questions:</span> <strong id="quiz-total-count">0</strong></div>
+                                <div class="q-stat"><span class="q-label">Status:</span> <strong id="quiz-status-text">Not Started</strong></div>
+                            </div>
+                        </div>
+                        <div id="quiz-questions-container" class="quiz-questions-stack">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <div class="quiz-actions-row">
+                            <button class="btn btn-primary" id="btn-submit-quiz" onclick="gradeChapterQuiz()">
+                                <i data-lucide="check-square"></i> Grade Assessment
+                            </button>
+                            <div id="quiz-result-score" class="quiz-score-indicator" style="display: none;">
+                                Score: <span id="quiz-score-val">0/0</span> (<span id="quiz-percent-val">0%</span>)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Results View -->
+            <div id="search-view" class="view-section" style="display: none;">
+                <div class="search-header-box">
+                    <h2>Search Results for "<span id="search-query-text"></span>"</h2>
+                    <p>Found <span id="search-results-count">0</span> matching entries across concepts and coding patterns.</p>
+                </div>
+                <div id="search-results-list" class="search-results-grid">
+                    <!-- Results dynamically loaded -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification for interaction feedback -->
+    <div id="toast-notification" class="toast">
+        <span id="toast-message">Progress saved!</span>
+    </div>
+
+    <!-- Marked.js for Markdown Processing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Prism.js for C++ Formatting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <!-- Prism Languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+    <!-- Prism Toolbar & Clipboard -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Core App Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
