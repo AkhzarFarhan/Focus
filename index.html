@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ Mastery — 17-Day Comprehensive Study Plan</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                    <span>C++ Mastery</span>
+                </div>
+                <button class="sidebar-close" id="sidebarCloseBtn" aria-label="Close Sidebar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Global Progress Tracker -->
+            <div class="progress-section">
+                <div class="progress-info">
+                    <span class="progress-label">Overall Progress</span>
+                    <span class="progress-percentage" id="overallPercentage">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="overallProgressBar" style="width: 0%"></div>
+                </div>
+                <div class="progress-stats">
+                    <span id="overallStatsCount">0 of 75 subtopics</span>
+                </div>
+            </div>
+
+            <!-- Search Panel in Sidebar -->
+            <div class="search-container">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="searchInput" placeholder="Search knowledgebase...">
+                <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Days Navigation List -->
+            <nav class="days-nav">
+                <div class="nav-title">Study Roadmap</div>
+                <ul class="days-list" id="daysList">
+                    <!-- Loaded dynamically via JS -->
+                    <li class="loading-item">Loading study plan...</li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Mobile & Actions Header -->
+            <header class="content-header">
+                <div class="header-left">
+                    <button class="menu-toggle" id="menuToggleBtn" aria-label="Open Menu">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <h1 class="header-title" id="currentTopicTitle">Loading Plan...</h1>
+                </div>
+                <div class="header-right">
+                    <button id="resetProgressBtn" class="btn-secondary" title="Reset Study Progress">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Reset Progress</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Loading Spinner / State -->
+            <div class="loading-state" id="loadingState">
+                <div class="spinner"></div>
+                <p>Parsing C++ Knowledgebase...</p>
+            </div>
+
+            <!-- Main Rendered Content Card -->
+            <article class="content-card" id="contentCard" style="display: none;">
+                <!-- Day Banner / Stats -->
+                <div class="day-banner">
+                    <div class="day-meta">
+                        <span class="day-badge" id="dayBadge">Day 1</span>
+                        <span class="hours-badge" id="hoursBadge">
+                            <i class="fa-regular fa-clock"></i> <span id="estimatedHours">0</span> hrs est.
+                        </span>
+                    </div>
+                    <h2 class="day-title" id="dayTopicTitle">Core Language Fundamentals</h2>
+                    <div class="day-completion-banner" id="dayCompletionBanner">
+                        <span class="completion-status-text" id="dayCompletionStatusText">0% Complete</span>
+                        <div class="day-progress-track">
+                            <div class="day-progress-bar" id="dayProgressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subtopics Render Container -->
+                <div class="subtopics-container" id="subtopicsContainer">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </article>
+
+            <!-- Search Results View -->
+            <div class="search-results-view" id="searchResultsView" style="display: none;">
+                <div class="results-header">
+                    <h3>Search Results for "<span id="searchQueryText"></span>"</h3>
+                    <button id="closeSearchBtn" class="btn-text">
+                        <i class="fa-solid fa-xmark"></i> Clear Results
+                    </button>
+                </div>
+                <div class="results-stats" id="searchResultsStats">Found 0 matches</div>
+                <div class="results-list" id="searchResultsList">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <i class="fa-solid fa-circle-check toast-icon"></i>
+        <span class="toast-message" id="toastMessage">Completed!</span>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
