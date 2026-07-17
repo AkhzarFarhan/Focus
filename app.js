@@ -373,7 +373,7 @@ function renderStandardDay(day) {
                             ${mcq.options.map((opt, optIdx) => `
                                 <div class="mcq-option" onclick="checkMcqAnswer(this, ${optIdx}, ${mcq.correct_option}, '${explanationId}')">
                                     <span class="option-letter">${String.fromCharCode(65 + optIdx)}</span>
-                                    <span class="option-text">${escapeHtmlText(opt)}</span>
+                                    <span class="option-text">${formatText(opt)}</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -470,7 +470,39 @@ function renderDay17Revision(day) {
         `;
     }
 
-    revisionCard.innerHTML = quickRefHtml + cheatSheetHtml + crossTopicHtml;
+    // Build Day 17 Interactive MCQs
+    let revisionMcqsHtml = '';
+    if (day.mcqs && day.mcqs.length > 0) {
+        revisionMcqsHtml += '<div class="quiz-section"><span class="quiz-section-title">Day 17 Capstone Assessment (100 Tricky MCQs)</span>';
+        day.mcqs.forEach((mcq, mcqIdx) => {
+            const explanationId = `mcq_ex_17_rev_${mcqIdx}`;
+            revisionMcqsHtml += `
+                <div class="mcq-card" id="mcq_card_17_rev_${mcqIdx}" style="margin-top: 16px;">
+                    <div class="mcq-question">
+                        <span class="mcq-num">Q${mcqIdx + 1}</span>
+                        <span class="mcq-text">${formatText(mcq.question)}</span>
+                    </div>
+                    <div class="mcq-options">
+                        ${mcq.options.map((opt, optIdx) => `
+                            <div class="mcq-option" onclick="checkMcqAnswer(this, ${optIdx}, ${mcq.correct_option}, '${explanationId}')">
+                                <span class="option-letter">${String.fromCharCode(65 + optIdx)}</span>
+                                <span class="option-text">${formatText(opt)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mcq-explanation" id="${explanationId}" style="display: none;">
+                        <div class="mcq-explanation-title">
+                            <i class="fa-solid fa-circle-info"></i> Learning Insight
+                        </div>
+                        <div class="mcq-explanation-text">${formatText(mcq.explanation)}</div>
+                    </div>
+                </div>
+            `;
+        });
+        revisionMcqsHtml += '</div>';
+    }
+
+    revisionCard.innerHTML = quickRefHtml + cheatSheetHtml + crossTopicHtml + revisionMcqsHtml;
     subtopicsContainer.appendChild(revisionCard);
 }
 
@@ -839,6 +871,12 @@ function formatText(text) {
     
     // Convert bold **text** to <strong>text</strong>
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert LaTeX inline math \( ... \) to <i>...</i>
+    html = html.replace(/\\\((.*?)\\\)/g, '<i>$1</i>');
+    
+    // Convert LaTeX inline math $ ... $ to <i>...</i>
+    html = html.replace(/\$(.*?)\$/g, '<i>$1</i>');
     
     // If the string is single-line, return immediately without paragraph wrapping
     if (!text.includes('\n')) {
