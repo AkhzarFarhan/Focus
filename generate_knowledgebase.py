@@ -2,16 +2,1157 @@
 """Generate a comprehensive 17-day C++ study knowledgebase JSON file."""
 import json, os
 
+ANALOGIES = {
+    "Compilation Model": (
+        "Think of building a C++ program like baking a layered cake from a recipe book:\n"
+        "- **Preprocessing** is like preparing the ingredients: reading the recipe, getting the tools ready, and copying text from your shopping list (replacing `#include` with actual header text).\n"
+        "- **Compilation** is like baking each layer of the cake (translation units) independently into object files (`.o`/`.obj`). The compiler doesn't know about other layers yet; it just compiles one source file at a time.\n"
+        "- **Linking** is assembling the layers together. The linker checks if any layers are missing and ensures that there is only exactly one recipe definition (**ODR**) for each layer.\n"
+        "- **One Definition Rule (ODR)** prevents multiple co-authors from defining different recipes for the same layer. If one author defines `LayerA` with chocolate and another with vanilla, the editor gets confused and you get Undefined Behavior."
+    ),
+    "Storage Duration & Linkage": (
+        "Think of variables in your code like items in a city:\n"
+        "- **Automatic (Stack)** is like a temporary rented scooter. You use it within your local neighborhood (scope) and it is reclaimed immediately when you're done.\n"
+        "- **Static** is a historical monument in the town square. It is erected once (initialized) and stays there forever until the city is closed (program exit).\n"
+        "- **Dynamic (Heap)** is a private plot of land that you allocate (`new`) and must explicitly sell (`delete`). If you forget, it stays owned by nobody, causing a land leak (memory leak).\n"
+        "- **Thread-local** is like a private passport in each citizen's pocket; each thread gets its own private instance.\n"
+        "- **Internal Linkage** is like a local dialect only spoken inside your house (only visible in this translation unit). **External Linkage** is like a global language visible across neighborhoods."
+    ),
+    "Value Categories": (
+        "Think of value categories like items in a shipping warehouse:\n"
+        "- **lvalue (Location Value)** is a labeled storage bin. It has a physical, permanent address in memory (identity) that you can inspect with `&`. You cannot easily move the whole bin, but you can copy items out of it.\n"
+        "- **prvalue (Pure Result Value)** is a physical object flying on a conveyor belt without a label. It has no permanent address (identity), but it is ready to be caught and put into a bin.\n"
+        "- **xvalue (eXpiring Value)** is a labeled storage bin that has a flag saying: 'This bin is about to be demolished, so feel free to steal its contents.' It has an identity, but is marked as safe to move from.\n"
+        "Move semantics simply casts an lvalue (labeled bin) into an xvalue (demolition bin) using `std::move`, allowing the compiler to perform a 'theft by agreement' (move constructor) instead of a slow copy."
+    ),
+    "const-correctness": (
+        "Think of constness as levels of lock-down for a treasure chest:\n"
+        "- **const** is a read-only padlock. You initialize the variable (at runtime) and lock it. You cannot change it, but it still requires checking the lock at runtime.\n"
+        "- **constexpr** is pre-calculating the value. Instead of checking the lock, you write the final answer directly on the paper before compile-time is over. A `constexpr` function can run at compile time or runtime.\n"
+        "- **consteval** is an immediate function. It **must** be pre-calculated before compilation finishes. Calling it with runtime values is a compile error.\n"
+        "- **constinit** is setting the starting value at compile time to prevent random initializations (static order fiasco), but allowing you to change it later during runtime."
+    ),
+    "Casts": (
+        "Think of C++ casts as different tools in a workshop:\n"
+        "- **static_cast** is a standard adapter. You convert integers to floats or base classes to derived classes when you are sure they fit. Checked at compile time.\n"
+        "- **dynamic_cast** is a security guard check. It checks the ID (`RTTI`) of a polymorphic pointer at runtime. If the pointer isn't actually a Derived class, it returns `nullptr` or throws. Safest but has runtime cost.\n"
+        "- **const_cast** is a key to a display cabinet. It lets you reach inside a const variable to change it (safe only if the original variable wasn't declared const, otherwise it is UB!).\n"
+        "- **reinterpret_cast** is looking at a wooden block and claiming it is a block of metal. It forces the compiler to treat the raw bits as another type. Highly dangerous, violates strict aliasing, and is rarely portable.\n"
+        "- **C-style casts** are like sledgehammers that force shapes through holes. They try `const_cast`, `static_cast`, and then silently fall back to `reinterpret_cast` without warning."
+    ),
+    "Resource Acquisition": (
+        "RAII is like a rental car agreement: the moment you sign the keys (constructor), you own the car, and the moment you return the keys (destructor), you release it. The resource's lifetime is bound to the lifespan of the stack object. If the stack unwinds due to an exception or scope exit, C++ guarantees that the destructor is called automatically, preventing resource leaks."
+    ),
+    "RAII": (
+        "RAII is like a rental car agreement: the moment you sign the keys (constructor), you own the car, and the moment you return the keys (destructor), you release it. The resource's lifetime is bound to the lifespan of the stack object. If the stack unwinds due to an exception or scope exit, C++ guarantees that the destructor is called automatically, preventing resource leaks."
+    ),
+    "Smart Pointers": (
+        "Think of resource ownership like property deeds:\n"
+        "- **std::unique_ptr** is a single physical deed to a house. Only one person can hold it. You cannot copy the deed (compile error); you must sign it over to someone else using `std::move`.\n"
+        "- **std::shared_ptr** is a shared bank account. Multiple cards link to the same account. The account remains open as long as at least one card is active. A reference counter keeps track; when it hits zero, the account closes (memory is freed).\n"
+        "- **std::weak_ptr** is a temporary visitor pass. You can look at the bank account but you don't own it. It doesn't keep the account open. You must `lock()` it to check if the account is still alive before using it."
+    ),
+    "Virtual functions": (
+        "Vtable is like a hotel reception desk directory. When a guest calls a polymorphic method (e.g. `draw()`), the compiler doesn't jump directly to a function. Instead, it looks up the directory index (`vptr` -> `vtable`) to see which function pointer is currently registered for that specific sub-class."
+    ),
+    "Move Semantics": (
+        "Think of moving vs copying like transferring files between hard drives:\n"
+        "- **Copying** is copying a 10 GB file byte-by-byte from Folder A to Folder B. It takes time, allocates new memory, and copies all data.\n"
+        "- **Moving** is simply renaming the directory pointer (cut and paste). Instead of copying the 10 GB of data, you copy the small 8-byte pointer address pointing to the data, and clear the source directory pointer to `nullptr`. Zero allocation, near-zero cost.\n"
+        "- **Rule of 5**: If you manage resource lifespans manually, you must implement all five pillars to prevent resource leaks: Destructor, Copy Constructor, Copy Assignment, Move Constructor, and Move Assignment."
+    ),
+    "SFINAE": (
+        "SFINAE (Substitution Failure Is Not An Error) is like a casting call for a movie. If an actor cannot speak a specific line (template substitution fails), the director doesn't cancel the movie (compiler error). They simply skip that actor and try the next one in the candidate list."
+    ),
+    "Exception Safety": (
+        "Exception safety guarantees are like database transaction logs:\n"
+        "- **Basic Guarantee**: If an exception occurs, no memory is leaked and objects are in a valid state, but data might be partially changed.\n"
+        "- **Strong Guarantee (Commit/Rollback)**: The operation either succeeds completely or rolls back to the original state with zero side effects. Usually achieved via 'copy-and-swap' (do work on a copy, then swap).\n"
+        "- **Nothrow Guarantee**: The operation is guaranteed to never fail (`noexcept`), which is critical for destructors, moves, and swaps."
+    ),
+    "thread": (
+        "Threads are like multiple chefs in a single kitchen sharing the same ingredients (heap/memory). A data race is when two chefs try to slice the same carrot at the same time. A Mutex is a lock on the kitchen counter — only one chef who holds the key can work on that counter."
+    ),
+    "mutex": (
+        "Threads are like multiple chefs in a single kitchen sharing the same ingredients (heap/memory). A data race is when two chefs try to slice the same carrot at the same time. A Mutex is a lock on the kitchen counter — only one chef who holds the key can work on that counter."
+    ),
+    "Memory Model": (
+        "Memory order is like how updates travel between branch offices:\n"
+        "- `seq_cst` (Sequential Consistency) is a global ledger updated in real-time. Everyone sees everything in the exact same order. Safe but slow.\n"
+        "- `relaxed` is like sending updates via regular mail. Eventually, everyone gets the same numbers, but there's no guarantee on who sees what order first."
+    )
+}
+
+CATEGORIES_MCQ = {
+    "compilation": [
+        {
+            "question": "What is the exact outcome of violating the One Definition Rule (ODR) for an entity across different translation units in C++ when studying `{subtopic}`?",
+            "options": [
+                "The compiler will fail to compile with a duplicate definition error.",
+                "The linker will always fail to link with a multiple definition error.",
+                "The program compiles and links successfully, but triggers Undefined Behavior at runtime.",
+                "The program is guaranteed to run correctly if all optimizations are disabled."
+            ],
+            "correct_option": 2,
+            "explanation": "ODR violations across different translation units are undefined behavior (UB). Linkers are not required to diagnose them, and they often silently select one definition, leading to random runtime crashes or wrong results."
+        },
+        {
+            "question": "Which of the following is NOT a translation unit in C++?",
+            "options": [
+                "A single `.cpp` file after preprocessing (with headers expanded).",
+                "An individual `.h` header file compiled by itself as a source.",
+                "A source file with all its included headers, after macros have been replaced.",
+                "A temporary preprocessed file (`.i`) generated by the compiler's preprocessor."
+            ],
+            "correct_option": 1,
+            "explanation": "A header file by itself is not a translation unit. A translation unit is a source file (.cpp, .cc) with all its included headers expanded by the preprocessor."
+        },
+        {
+            "question": "What happens if a header with `#pragma once` is copied under a different name to another directory, both are included in a `.cpp` file, and we build `{subtopic}`?",
+            "options": [
+                "The compiler ignores the duplicate header because the contents are identical.",
+                "Both headers are included and parsed, potentially causing redefinition errors.",
+                "The linker throws a duplicate symbol error at link time.",
+                "The preprocessor automatically merges the duplicate files."
+            ],
+            "correct_option": 1,
+            "explanation": "`#pragma once` is file-path or file-inode identity based. If the file is copied to a different path with a different name, `#pragma once` cannot detect it as the same file, so it is included twice, potentially causing redefinition errors."
+        },
+        {
+            "question": "If you define a non-inline global variable `int x = 42;` in a header file, and that header is included by two `.cpp` files, what error occurs?",
+            "options": [
+                "A compilation error in both translation units.",
+                "A linker error for multiple definitions of symbol `x`.",
+                "No error, the variables are merged into a single static storage.",
+                "A runtime access violation when `x` is modified."
+            ],
+            "correct_option": 1,
+            "explanation": "Each `.cpp` file including the header defines `x` as a global variable with external linkage. When the linker combines the object files, it finds duplicate definitions for symbol `x` and fails to link."
+        },
+        {
+            "question": "In C++, what linkage type does a namespace-scope `static` variable or function have?",
+            "options": [
+                "External linkage — visible across all translation units.",
+                "Internal linkage — local to the translation unit it is defined in.",
+                "No linkage — only visible within the block scope.",
+                "Dynamic linkage — resolved at runtime."
+            ],
+            "correct_option": 1,
+            "explanation": "The `static` keyword at namespace scope gives the entity internal linkage, meaning its name is only visible and usable within the translation unit where it is defined."
+        },
+        {
+            "question": "Why are anonymous namespaces preferred over the `static` keyword for internal linkage in modern C++?",
+            "options": [
+                "Anonymous namespaces are faster at compile time.",
+                "`static` cannot be applied to user-defined types (like classes or structs), but anonymous namespaces can.",
+                "Anonymous namespaces give external linkage but keep the names hidden.",
+                "`static` is deprecated in C++20."
+            ],
+            "correct_option": 1,
+            "explanation": "You cannot declare a `static class` or `static struct` at namespace scope to give it internal linkage in C++. Anonymous namespaces solve this by giving internal linkage to all enclosed names, including types, variables, and functions."
+        },
+        {
+            "question": "What is the expansion result of the macro `#define MULTIPLY(x, y) x * y` when invoked as `MULTIPLY(1 + 2, 3 + 4)`?",
+            "options": [
+                "21 (7 * 3)",
+                "11 (1 + 2 * 3 + 4)",
+                "9 (1 + 2 * 4)",
+                "Compilation error due to invalid operator combination."
+            ],
+            "correct_option": 1,
+            "explanation": "Macros perform raw textual substitution. `MULTIPLY(1 + 2, 3 + 4)` expands literally to `1 + 2 * 3 + 4`. Due to operator precedence, multiplication runs first (`2 * 3 = 6`), yielding `1 + 6 + 4 = 11`. Always parenthesize macro parameters: `((x) * (y))`."
+        },
+        {
+            "question": "What is the static initialization order fiasco in C++?",
+            "options": [
+                "Static local variables are initialized in random order across threads.",
+                "The order of initialization of static variables within the same translation unit is undefined.",
+                "The order of initialization of non-local static variables in different translation units is undefined.",
+                "Compiler optimization silently reorders global constructor calls."
+            ],
+            "correct_option": 2,
+            "explanation": "Within a single translation unit, static variables are initialized in order of definition. However, between different translation units, the order of initialization of non-local static variables is undefined, which can cause one static variable to use another uninitialized one."
+        },
+        {
+            "question": "Which C++17 feature resolves the header redefinition problem for global constants without violating ODR?",
+            "options": [
+                "`inline` variables.",
+                "`constexpr` functions.",
+                "Anonymous namespaces.",
+                "External template instantiation."
+            ],
+            "correct_option": 0,
+            "explanation": "C++17 introduced `inline` variables. If a variable is declared `inline` (e.g. `inline constexpr int MaxValue = 100;`), it can be defined in multiple translation units (such as via header inclusion) and the linker will merge all definitions into a single object."
+        },
+        {
+            "question": "How do C++20 modules affect macro visibility compared to `#include` headers?",
+            "options": [
+                "Modules export all macros defined inside them by default.",
+                "Macros defined in modules are only visible if the module is imported using `import`.",
+                "Modules do not export macros unless explicitly specified, preventing macro pollution.",
+                "Modules completely disable macro substitution."
+            ],
+            "correct_option": 2,
+            "explanation": "One of the major benefits of C++20 modules is that they do not leak macros. A module file can define macros for internal use, but they will not be exported to the importing file, eliminating name pollution."
+        }
+    ],
+    "types": [
+        {
+            "question": "What happens if you bind a temporary object (prvalue) to a `const T&` reference?",
+            "options": [
+                "The temporary is destroyed at the end of the expression, leaving a dangling reference.",
+                "The lifetime of the temporary is extended to match the lifetime of the reference.",
+                "The compiler makes a permanent copy of the temporary on the heap.",
+                "It is a compilation error."
+            ],
+            "correct_option": 1,
+            "explanation": "C++ guarantees that binding a temporary object to a const lvalue reference extends the lifetime of that temporary to match the lifetime of the reference itself, preventing dangling reference bugs."
+        },
+        {
+            "question": "What happens if you try to modify a member variable in a `const` member function in `{subtopic}`?",
+            "options": [
+                "It compiles fine, but triggers a segmentation fault at runtime.",
+                "Compilation fails, unless the member variable is marked `mutable`.",
+                "It compiles fine, but the changes are discarded when the function exits.",
+                "It compiles fine only if the class is not allocated on the stack."
+            ],
+            "correct_option": 1,
+            "explanation": "A `const` member function promises not to modify any observable state of the object. Modifying any member variable inside it is a compilation error, unless the member is declared with the `mutable` keyword."
+        },
+        {
+            "question": "Can you initialize a `constexpr` variable using the return value of a non-constexpr runtime function?",
+            "options": [
+                "Yes, the compiler will defer evaluation to runtime.",
+                "Yes, if the function has no side effects.",
+                "No, compilation will fail because a `constexpr` value must be known at compile time.",
+                "Yes, but only if compiler optimization is turned on."
+            ],
+            "correct_option": 2,
+            "explanation": "`constexpr` variables must be initialized with constant expressions that can be evaluated at compile time. Initializing one with a runtime value results in a compilation error."
+        },
+        {
+            "question": "What is the consequence of calling a `consteval` function with non-constant (runtime) arguments?",
+            "options": [
+                "The function is executed at runtime instead.",
+                "The compiler fails to compile the call.",
+                "The compiler generates a runtime check that throws an exception if arguments are invalid.",
+                "The return value is undefined."
+            ],
+            "correct_option": 1,
+            "explanation": "`consteval` (introduced in C++20) specifies an immediate function. Immediate functions MUST be evaluated at compile time. Calling them with runtime values is a compilation error."
+        },
+        {
+            "question": "Can a `constinit` variable be modified after initialization during runtime?",
+            "options": [
+                "No, `constinit` variables are implicitly `const`.",
+                "Yes, `constinit` only requires compile-time initialization, not runtime immutability.",
+                "Yes, but only inside `consteval` functions.",
+                "No, modifying it triggers undefined behavior."
+            ],
+            "correct_option": 1,
+            "explanation": "`constinit` (C++20) ensures that a variable is initialized at compile time (preventing static initialization order issues), but it does not make the variable constant. To make it constant, you must explicitly combine it with `const`: `constinit const int x = 42;`."
+        },
+        {
+            "question": "Is it safe to use `static_cast` to cast a `Base*` to a `Derived*`?",
+            "options": [
+                "Yes, the compiler checks the actual runtime type and returns `nullptr` on failure.",
+                "Yes, but it is compile-time checked only. If the pointer is not actually of the Derived type, dereferencing it is UB.",
+                "No, it is a compilation error. You must use `dynamic_cast`.",
+                "Yes, `static_cast` automatically handles polymorphic conversions safely."
+            ],
+            "correct_option": 1,
+            "explanation": "`static_cast` performs compile-time conversions. It does not perform any runtime checks. Casting a base pointer to a derived pointer with `static_cast` is unsafe: if the object is not of the derived type, dereferencing the casted pointer is undefined behavior."
+        },
+        {
+            "question": "What does `dynamic_cast` do if it fails to cast a reference type `Base&` to `Derived&`?",
+            "options": [
+                "It returns a null reference.",
+                "It throws a `std::bad_cast` exception.",
+                "It aborts the program immediately.",
+                "It sets the reference to an empty object."
+            ],
+            "correct_option": 1,
+            "explanation": "Since there is no such thing as a null reference in C++, `dynamic_cast` cannot return null when casting reference types. Instead, it throws a `std::bad_cast` exception on failure."
+        },
+        {
+            "question": "If you cast an `int*` to a `float*` using `reinterpret_cast` and dereference it to read the value, what is the result?",
+            "options": [
+                "It returns the floating-point representation of the integer bits.",
+                "It is a compiler error.",
+                "It triggers Undefined Behavior due to the strict aliasing rule.",
+                "It triggers a hardware trap."
+            ],
+            "correct_option": 2,
+            "explanation": "The strict aliasing rule states that you cannot access an object of one type through a pointer of a different type (with exceptions like `char*` or signed/unsigned variants). Violating this using `reinterpret_cast` triggers undefined behavior."
+        },
+        {
+            "question": "If both `void print(int)` and `template<typename T> void print(T)` match a call `print(42)` equally well, which one is selected by overload resolution?",
+            "options": [
+                "The template function, because it is more generic.",
+                "The non-template function.",
+                "The compiler reports an ambiguity error.",
+                "The compiler selects one randomly."
+            ],
+            "correct_option": 1,
+            "explanation": "Overload resolution rules state that if a non-template function and a template specialization match a call equally well, the non-template function is always preferred."
+        },
+        {
+            "question": "Does Argument-Dependent Lookup (ADL) occur if the function call is fully qualified (e.g. `std::foo(x)`)?",
+            "options": [
+                "Yes, ADL searches namespaces associated with the type of `x`.",
+                "No, ADL is only performed for unqualified function calls.",
+                "Yes, but only if `x` is a user-defined type.",
+                "No, qualified calls are handled entirely at link time."
+            ],
+            "correct_option": 1,
+            "explanation": "Argument-Dependent Lookup (ADL) only applies to unqualified names (e.g. `foo(x)`). If the call is qualified (e.g. `std::foo(x)` or `MyLib::foo(x)`), the compiler uses normal lookup rules and bypasses ADL completely."
+        }
+    ],
+    "oop": [
+        {
+            "question": "What happens when you assign a `Derived` class object to a `Base` class object by value (`Base b = derivedObj;`)?",
+            "options": [
+                "A runtime error occurs because the sizes do not match.",
+                "Object slicing occurs: the derived-specific data and vtable are stripped away, leaving a plain Base object.",
+                "The Base object inherits the virtual table of the Derived object dynamically.",
+                "It is a compilation error."
+            ],
+            "correct_option": 1,
+            "explanation": "Assigning by value copies only the Base portion of the Derived object. This is called 'object slicing'. All derived members and polymorphic behavior are lost."
+        },
+        {
+            "question": "What happens if you delete a `Derived` object via a `Base*` pointer when the Base class destructor is NOT marked `virtual`?",
+            "options": [
+                "The compiler generates a warning and inserts the virtual call automatically.",
+                "It triggers Undefined Behavior; typically the Derived destructor is not called, causing resource leaks.",
+                "The program compiles but throws a `std::bad_cast` at runtime.",
+                "The memory is freed, and the destructors are called in reverse order anyway."
+            ],
+            "correct_option": 1,
+            "explanation": "Deleting a derived object through a base pointer without a virtual destructor is undefined behavior. The derived destructor will not execute, leading to leaks of resources owned by the derived class."
+        },
+        {
+            "question": "What happens if you call a pure virtual function inside the constructor of a Base class?",
+            "options": [
+                "It compiles and calls the Derived class implementation dynamically.",
+                "It compiles but triggers Undefined Behavior (typically a crash) because the Derived part is not yet constructed and its vtable is not bound.",
+                "The compiler forces the virtual function to be inline.",
+                "It is a compilation error."
+            ],
+            "correct_option": 1,
+            "explanation": "During base class construction, the object is of the base type, not the derived type. Calling a virtual function calls the base implementation. If it is pure virtual, it has no implementation, leading to a 'pure virtual method call' crash (undefined behavior)."
+        },
+        {
+            "question": "What is the size of an empty class `class Empty {};` in C++?",
+            "options": [
+                "0 bytes, to save memory.",
+                "At least 1 byte, to ensure different objects of this class have unique memory addresses.",
+                "4 bytes, which is the default word size.",
+                "8 bytes, because of vptr alignment."
+            ],
+            "correct_option": 1,
+            "explanation": "C++ requires all objects to have unique memory addresses. An empty class is given a size of at least 1 byte so that `Empty a, b;` have distinct pointers `&a != &b`."
+        },
+        {
+            "question": "What problem does virtual inheritance (`class Derived : virtual public Base`) solve?",
+            "options": [
+                "It makes all member functions virtual automatically.",
+                "It resolves the diamond problem in multiple inheritance, ensuring only one instance of the Base class is shared.",
+                "It speeds up dynamic cast lookup times.",
+                "It prevents memory leaks in polymorphic interfaces."
+            ],
+            "correct_option": 1,
+            "explanation": "Virtual inheritance ensures that only one shared instance of a common base class is constructed, resolving ambiguity and duplication in diamond inheritance topologies."
+        },
+        {
+            "question": "What happens if you mark a member function as `override` but its signature does not match any virtual function in the Base class?",
+            "options": [
+                "The compiler compiles it as a new virtual function.",
+                "It is a compilation error.",
+                "The compiler ignores it and warns the developer.",
+                "It runs slower at runtime due to search latency."
+            ],
+            "correct_option": 1,
+            "explanation": "The `override` keyword forces the compiler to verify that the function matches an inherited virtual function. If it doesn't, it is a compilation error, preventing silent signature mismatch bugs."
+        },
+        {
+            "question": "What is a covariant return type in C++ virtual functions?",
+            "options": [
+                "A virtual function in Derived that returns a pointer/reference to Derived, while the Base virtual function returns a pointer/reference to Base.",
+                "A return type that changes from `int` to `double` depending on runtime arguments.",
+                "A template return type that adapts to compile-time parameters.",
+                "An invalid return type that triggers a compilation error."
+            ],
+            "correct_option": 0,
+            "explanation": "C++ allows virtual functions to override base implementations with covariant return types. If the base returns a pointer/reference to `Base`, the override can return a pointer/reference to `Derived`."
+        },
+        {
+            "question": "How does adding virtual functions affect the size of a class object?",
+            "options": [
+                "It does not affect the size; virtual functions are stored in the code segment.",
+                "It adds the size of a virtual table pointer (`vptr`), typically 8 bytes on 64-bit systems.",
+                "It multiplies the size of the class by the number of virtual functions.",
+                "It adds 1 byte for each virtual function."
+            ],
+            "correct_option": 1,
+            "explanation": "Adding virtual functions forces the compiler to insert a virtual table pointer (`vptr`) into each object of the class to resolve calls at runtime, adding 8 bytes on a 64-bit architecture."
+        },
+        {
+            "question": "Why is `dynamic_cast` significantly slower than `static_cast`?",
+            "options": [
+                "It performs file operations under the hood.",
+                "It queries Run-Time Type Information (RTTI) and traverses the inheritance hierarchy at runtime to check safety.",
+                "It copies the entire object in memory during casting.",
+                "It disables compiler optimizations for the enclosing function."
+            ],
+            "correct_option": 1,
+            "explanation": "`dynamic_cast` must check the validity of the cast at runtime by checking the class hierarchy (using RTTI metadata), which requires table lookups and pointer traversals, making it slower."
+        },
+        {
+            "question": "What is the primary benefit of the Type Erasure design pattern (like `std::function`)?",
+            "options": [
+                "It deletes objects automatically when they are no longer used.",
+                "It provides polymorphism for unrelated types without requiring a shared base class or virtual hierarchy.",
+                "It compresses the size of types in memory.",
+                "It converts types to string representations automatically."
+            ],
+            "correct_option": 1,
+            "explanation": "Type erasure hides the concrete type of an object behind a uniform interface (e.g. `std::function` hiding lambdas, function pointers, and functors) without requiring common base class inheritance."
+        }
+    ],
+    "memory": [
+        {
+            "question": "What happens when you pass an array `int arr[10]` to a function declared as `void process(int arr[])`?",
+            "options": [
+                "The array is passed by value, making a copy of all 10 integers.",
+                "It decays to a raw pointer `int*`, and its size information is lost.",
+                "The compiler verifies the size is exactly 10 and throws a warning if not.",
+                "It is passed as a safe reference to the array."
+            ],
+            "correct_option": 1,
+            "explanation": "Arrays passed to functions decay to pointers. Inside `process`, `arr` is a raw pointer (`int*`), and `sizeof(arr)` returns the pointer size (e.g. 8 bytes), not the array size."
+        },
+        {
+            "question": "Which of the following is a compiler error for `std::unique_ptr`?",
+            "options": [
+                "Moving it using `std::move`.",
+                "Attempting to copy it via copy assignment or copy constructor.",
+                "Resetting it using `.reset()`.",
+                "Releasing ownership with `.release()`."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::unique_ptr` represents exclusive ownership. To prevent duplicate owners, copying is disabled (deleted copy constructor/assignment), causing a compilation error."
+        },
+        {
+            "question": "What is the outcome of a circular dependency where two objects contain `std::shared_ptr` pointing to each other?",
+            "options": [
+                "The compiler reports a cyclic template dependency error.",
+                "The reference counts will never drop to zero, leaking both objects.",
+                "The destructors are called normally due to automatic cycle detection.",
+                "The program crashes with a stack overflow on deletion."
+            ],
+            "correct_option": 1,
+            "explanation": "Because each object holds a `std::shared_ptr` to the other, their reference counts remain at least 1, even after all external pointers are destroyed, leaking the memory."
+        },
+        {
+            "question": "How do you access the managed object of a `std::weak_ptr`?",
+            "options": [
+                "Dereference it directly using `*` or `->`.",
+                "You must call `.lock()` to obtain a `std::shared_ptr` first.",
+                "Call `.get()` to retrieve the raw pointer.",
+                "It is not possible to access the object once it is in a weak pointer."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::weak_ptr` does not provide direct access. You must call `.lock()` which returns a `std::shared_ptr`. If the managed object has already been destroyed, the returned shared pointer will be empty."
+        },
+        {
+            "question": "What is the primary benefit of using `std::make_shared` instead of `std::shared_ptr<T>(new T)`?",
+            "options": [
+                "It makes the shared pointer thread-safe.",
+                "It performs a single memory allocation for both the control block and the object, improving performance and cache locality.",
+                "It allows using custom delete functions.",
+                "It prevents compile-time template instantiation overhead."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::shared_ptr<T>(new T)` allocates the object first, then allocates the control block. `std::make_shared` allocates a single block of memory big enough to hold both, reducing heap allocation overhead."
+        },
+        {
+            "question": "How does a custom deleter function pointer affect the size of a `std::unique_ptr`?",
+            "options": [
+                "It does not affect the size; it remains 8 bytes.",
+                "It increases the size of the pointer (typically to 16 bytes) because it must store the function pointer.",
+                "It causes the unique_ptr to allocate memory on the heap.",
+                "It is a compile-time construct and does not exist at runtime."
+            ],
+            "correct_option": 1,
+            "explanation": "If a custom deleter is a function pointer, the unique_ptr must store it, increasing its size. Using a stateless functor (like a lambda with no captures) avoids this size overhead."
+        },
+        {
+            "question": "What is the purpose of placement `new` in C++?",
+            "options": [
+                "It automatically finds the best place in the heap to allocate memory.",
+                "It constructs an object on a pre-allocated raw memory buffer without allocating new heap memory.",
+                "It moves an object to another thread's stack space.",
+                "It optimizes memory alignment dynamically."
+            ],
+            "correct_option": 1,
+            "explanation": "Placement `new` (e.g. `new (buffer) MyClass()`) constructs an object at a specific, pre-allocated memory address, avoiding heap allocation costs."
+        },
+        {
+            "question": "How must you destroy an object constructed via placement `new`?",
+            "options": [
+                "Call `delete ptr;`.",
+                "Explicitly call the object's destructor (`ptr->~T()`) and then manually manage the buffer's memory.",
+                "Let it go out of scope; the stack automatically deletes it.",
+                "Call `free(ptr);`."
+            ],
+            "correct_option": 1,
+            "explanation": "Because placement `new` did not allocate memory from the global heap, calling `delete` is undefined behavior. You must explicitly invoke the destructor and then clean up the raw buffer."
+        },
+        {
+            "question": "What is the undefined behavior hazard in the code `int* p = new int[10]; delete p;`?",
+            "options": [
+                "Using the wrong delete operator (`delete` instead of `delete[]`) is Undefined Behavior.",
+                "There is no hazard; `delete` automatically knows it is an array.",
+                "It is a compiler error and won't compile.",
+                "It causes a stack overflow."
+            ],
+            "correct_option": 0,
+            "explanation": "Memory allocated with `new[]` must be freed with `delete[]`. Using plain `delete` on an array pointer is undefined behavior, often causing heap corruption or failing to call destructors for elements 1 to 9."
+        },
+        {
+            "question": "What is the risk of returning a local variable by reference `const int&` from a function?",
+            "options": [
+                "It copies the variable unnecessarily.",
+                "The local variable is destroyed at function exit, leaving a dangling reference, and accessing it is UB.",
+                "It compiles only if the variable is marked `static`.",
+                "It causes a memory leak on the stack."
+            ],
+            "correct_option": 1,
+            "explanation": "Local variables have automatic storage duration (stack-allocated) and are destroyed when the function returns. Accessing a reference to a destroyed local variable is undefined behavior."
+        }
+    ],
+    "templates": [
+        {
+            "question": "When does template instantiation occur in C++?",
+            "options": [
+                "At runtime, when the function is called.",
+                "At compile time, when the template is instantiated with concrete types.",
+                "At link time, when symbols are resolved.",
+                "During preprocessing."
+            ],
+            "correct_option": 1,
+            "explanation": "Templates are compile-time constructs. The compiler generates concrete class or function code (instantiation) during compilation when it sees the template used with specific type arguments."
+        },
+        {
+            "question": "What is SFINAE (Substitution Failure Is Not An Error) in C++ templates?",
+            "options": [
+                "A compiler flag that ignores all syntax errors inside templates.",
+                "A rule stating that if a substitution failure occurs during overload candidate resolution, the candidate is discarded without causing a compilation error.",
+                "A template debugging tool.",
+                "A C++20 feature that replaces concepts."
+            ],
+            "correct_option": 1,
+            "explanation": "SFINAE states that if a type substitution fails while inspecting overloaded templates, it does not stop compilation. The compiler simply removes that candidate from the overload set and keeps searching."
+        },
+        {
+            "question": "How do you define an explicit template specialization for class `Box` with type `int`?",
+            "options": [
+                "`template<int> class Box { ... };`",
+                "`template<> class Box<int> { ... };`",
+                "`template class Box<int>;`",
+                "`specialized class Box<int> { ... };`"
+            ],
+            "correct_option": 1,
+            "explanation": "Explicit (or full) template specialization is declared with `template<>` followed by the class definition specifying the type in brackets: `class Box<int> { ... };`."
+        },
+        {
+            "question": "Why is the `typename` keyword required before a nested dependent name (e.g. `typename T::iterator`) in templates?",
+            "options": [
+                "It is a hint to the compiler to inline the type.",
+                "To resolve ambiguity, informing the compiler that the name refers to a nested type rather than a static member variable.",
+                "To import the type into the namespace.",
+                "It is only required in C++98, not modern C++."
+            ],
+            "correct_option": 1,
+            "explanation": "Because `T` is a template parameter, the compiler cannot inspect it during the first phase of template parsing. It assumes nested names are static members unless prefixed with `typename` to signify a type."
+        },
+        {
+            "question": "How does `std::enable_if` conditionally enable templates?",
+            "options": [
+                "It throws a compilation warning if the condition is false.",
+                "It uses SFINAE: if the condition is false, the nested type does not exist, causing substitution to fail and candidate discard.",
+                "It is a runtime check that throws an exception.",
+                "It disables optimizer passes for the template."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::enable_if_t<Cond, T>` defines a nested `type` equal to `T` only if `Cond` is true. If `Cond` is false, it has no nested type, triggering a substitution failure (SFINAE) and excluding the template from overload resolution."
+        },
+        {
+            "question": "What is the expanded result of the C++17 fold expression `(... + args)` where `args` is `1, 2, 3`?",
+            "options": [
+                "`(1 + (2 + 3))`",
+                "`((1 + 2) + 3)`",
+                "`1 + 2 + 3` (flat summation)",
+                "It is invalid syntax."
+            ],
+            "correct_option": 1,
+            "explanation": "`(... + args)` is a unary left fold. It expands starting from the left: `((1 + 2) + 3)`. A right fold is `(args + ...)` which expands to `(1 + (2 + 3))`."
+        },
+        {
+            "question": "What happens if a template argument fails to satisfy a C++20 `concept` constraint (e.g. `requires std::integral<T>`)?",
+            "options": [
+                "The compiler falls back to runtime type checks.",
+                "It produces a clean compilation error at the call site, listing which constraint failed.",
+                "The compiler ignores the template and uses default arguments.",
+                "It triggers undefined behavior."
+            ],
+            "correct_option": 1,
+            "explanation": "C++20 concepts replace complex template SFINAE hacks with clear, readable constraint requirements. If constraint checks fail, the compiler outputs a clean, readable error explaining exactly which constraint was violated."
+        },
+        {
+            "question": "Can you partially specialize a function template in C++?",
+            "options": [
+                "Yes, using the standard `template<typename T> void f<T*>()` syntax.",
+                "No, function templates can only be fully specialized; you must use function overloading instead.",
+                "Yes, but only inside namespaces.",
+                "Yes, if the return type is `auto`."
+            ],
+            "correct_option": 1,
+            "explanation": "C++ does not allow partial specialization of function templates. If you need to partially specialize a function template, you must use function overloading or delegate to a helper class template."
+        },
+        {
+            "question": "What is two-phase lookup in template compilation?",
+            "options": [
+                "The compiler parses the template once for syntax, and once for linkage.",
+                "Non-dependent names are checked in phase 1 (definition); dependent names are checked in phase 2 (instantiation).",
+                "It is a runtime optimization phase.",
+                "The compiler compiles the header first, then the source."
+            ],
+            "correct_option": 1,
+            "explanation": "During phase 1, the compiler parses the template and checks all names that do not depend on template parameters. During phase 2 (when the template is instantiated with actual types), the compiler resolves all dependent names."
+        },
+        {
+            "question": "What is Class Template Argument Deduction (CTAD) introduced in C++17?",
+            "options": [
+                "It allows class templates to inherit template arguments from base classes.",
+                "It allows the compiler to deduce class template parameters from constructor arguments, avoiding explicit template parameters.",
+                "It compiles templates faster by caching template types.",
+                "It is a dynamic cast for templates."
+            ],
+            "correct_option": 1,
+            "explanation": "CTAD allows writing `std::pair p(1, 2.5)` instead of `std::pair<int, double> p(1, 2.5)`. The compiler automatically infers the template types by inspecting constructor parameters."
+        }
+    ],
+    "concurrency": [
+        {
+            "question": "What is the key difference between `std::thread` and `std::jthread` (C++20) on destruction?",
+            "options": [
+                "`std::jthread` allocates thread resources on the stack.",
+                "`std::jthread` automatically joins and requests cooperative interruption on destruction, while `std::thread` calls `std::terminate` if it is still joinable.",
+                "`std::thread` is faster to construct.",
+                "`std::jthread` does not support lambda execution."
+            ],
+            "correct_option": 1,
+            "explanation": "If a `std::thread` is destroyed while it is still joinable (running and not joined/detached), it calls `std::terminate`, crashing the program. `std::jthread` automatically joins and cooperatively signals stop on destruction."
+        },
+        {
+            "question": "What constitutes a data race in C++?",
+            "options": [
+                "Two threads executing different functions simultaneously.",
+                "Two or more threads accessing the same memory location concurrently, where at least one access is a write, and without synchronization.",
+                "Using global variables in a multithreaded application.",
+                "When a thread fails to acquire a lock in time."
+            ],
+            "correct_option": 1,
+            "explanation": "A data race is defined as concurrent unsynchronized access to the same memory location where at least one thread is writing. Data races are undefined behavior in C++."
+        },
+        {
+            "question": "Why would you prefer `std::unique_lock` over `std::lock_guard`?",
+            "options": [
+                "`std::unique_lock` is faster.",
+                "`std::unique_lock` provides advanced features like deferring lock, explicit unlocking, timeout locking, and move semantics, whereas `std::lock_guard` is strictly scoped.",
+                "`std::lock_guard` causes deadlocks easily.",
+                "`std::unique_lock` does not require a mutex reference."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::lock_guard` is a simple, zero-overhead wrapper for basic scoped locking. `std::unique_lock` has a small overhead but supports complex use cases like deferred locking, manual unlocking, and transferring locks."
+        },
+        {
+            "question": "How does `std::scoped_lock` (C++17) prevent deadlocks when locking multiple mutexes?",
+            "options": [
+                "It compiles the mutexes into a single lock.",
+                "It uses a deadlock-avoidance algorithm to lock all passed mutexes simultaneously.",
+                "It runs a background thread to monitor locks.",
+                "It converts mutexes to atomic variables."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::scoped_lock` can lock multiple mutexes. It uses the same deadlock avoidance algorithm as `std::lock` under the hood, ensuring they are acquired in a safe, sorted sequence."
+        },
+        {
+            "question": "What is the key benefit of `std::atomic` variables?",
+            "options": [
+                "They make entire classes thread-safe.",
+                "Operations on them are guaranteed to be atomic, preventing data races without needing a heavy mutex lock.",
+                "They run code on separate CPU cores.",
+                "They prevent memory allocations."
+            ],
+            "correct_option": 1,
+            "explanation": "Operations on `std::atomic` variables are executed as single, indivisible CPU instructions, ensuring thread safety and preventing data races without the system-call overhead of mutexes."
+        },
+        {
+            "question": "What is the default memory order for atomic operations in C++?",
+            "options": [
+                "`std::memory_order_relaxed`",
+                "`std::memory_order_seq_cst` (Sequential Consistency)",
+                "`std::memory_order_acquire`",
+                "`std::memory_order_release`"
+            ],
+            "correct_option": 1,
+            "explanation": "By default, all atomic operations use `std::memory_order_seq_cst`. This provides sequential consistency, establishing a global, total ordering of all operations visible to all threads."
+        },
+        {
+            "question": "What guarantees does `std::memory_order_relaxed` provide?",
+            "options": [
+                "It guarantees that operations are atomic, but provides no synchronization or ordering guarantees for surrounding memory accesses.",
+                "It behaves exactly like sequentially consistent order but runs faster.",
+                "It locks the CPU caches during execution.",
+                "It is a runtime check that throws an exception on race."
+            ],
+            "correct_option": 0,
+            "explanation": "`memory_order_relaxed` only guarantees atomicity of the variable itself. The compiler and CPU are free to reorder surrounding read/write instructions around it, providing no synchronization between threads."
+        },
+        {
+            "question": "Why must a condition variable wait loop check the predicate condition (e.g. `cv.wait(lock, []{ return ready; })`)?",
+            "options": [
+                "To yield the CPU back to the OS.",
+                "To prevent spurious wakeups, where the thread wakes up without receiving a signal.",
+                "Because condition variables can only wake up once.",
+                "To register the thread with the scheduler."
+            ],
+            "correct_option": 1,
+            "explanation": "Condition variables are subject to 'spurious wakeups' due to OS implementation details. A thread can wake up even if no signal was sent. Thus, the thread must always re-verify the predicate condition."
+        },
+        {
+            "question": "What is the relationship between `std::promise` and `std::future`?",
+            "options": [
+                "They are synonyms for the same class.",
+                "`std::promise` sets a value or exception in a shared state, which `std::future` retrieves asynchronously.",
+                "`std::future` is used to send values, `std::promise` is used to read them.",
+                "They are used to create recursive mutex locks."
+            ],
+            "correct_option": 1,
+            "explanation": "A promise is the writer-end and a future is the reader-end of an asynchronous channel. `std::promise` writes a value or exception to the shared channel state, which is retrieved via `std::future::get()`."
+        },
+        {
+            "question": "Does the `volatile` keyword provide thread synchronization or atomicity in C++?",
+            "options": [
+                "Yes, it makes variables thread-safe.",
+                "No, `volatile` only prevents compiler register caching optimizations for hardware registers; it does NOT prevent data races or guarantee thread memory order.",
+                "Yes, it acts as a lightweight atomic variable.",
+                "No, it is a deprecated keyword in modern C++."
+            ],
+            "correct_option": 1,
+            "explanation": "Unlike Java/C#, `volatile` in C++ has nothing to do with multithreading. It only instructs the compiler not to optimize away reads/writes to memory (useful for memory-mapped I/O). It does not generate atomic CPU operations or memory barriers."
+        }
+    ],
+    "diagnostics": [
+        {
+            "question": "What are the three exception safety guarantees in C++?",
+            "options": [
+                "Compile-time, link-time, and runtime safety.",
+                "Basic guarantee (no leaks, valid state), Strong guarantee (commit or rollback), and Nothrow guarantee (cannot fail).",
+                "Try, catch, and throw guarantees.",
+                "Checked exceptions, unchecked exceptions, and system panics."
+            ],
+            "correct_option": 1,
+            "explanation": "The three standard guarantees are: Basic (objects are in a valid state, no leaks), Strong (operation commits or rolls back completely), and Nothrow (`noexcept` functions that cannot fail)."
+        },
+        {
+            "question": "What happens if an exception is thrown out of a destructor during stack unwinding?",
+            "options": [
+                "The exception is caught by the compiler runtime and ignored.",
+                "The program aborts immediately via `std::terminate`.",
+                "The destructor resumes from the next line.",
+                "The program switches to a backup call stack."
+            ],
+            "correct_option": 1,
+            "explanation": "If a destructor throws an exception while another exception is active (during stack unwinding), C++ cannot handle two active exceptions at once and immediately calls `std::terminate`."
+        },
+        {
+            "question": "Why is `static_assert` preferred over runtime assertions (`assert`) for checking invariants?",
+            "options": [
+                "`static_assert` runs faster at runtime.",
+                "`static_assert` is evaluated at compile time, catching errors before the program even runs, with zero runtime cost.",
+                "`static_assert` can check heap memory allocations.",
+                "`assert` is deprecated in C++."
+            ],
+            "correct_option": 1,
+            "explanation": "`static_assert` evaluates constant expressions at compile time. If the assertion fails, compilation fails, catching bugs early without shipping checks to runtime."
+        },
+        {
+            "question": "What is the primary bug type caught by AddressSanitizer (ASan)?",
+            "options": [
+                "Deadlocks in lock acquisition.",
+                "Out-of-bounds memory accesses (buffer overflows) and use-after-free bugs.",
+                "Thread synchronization races.",
+                "Integer divisions by zero."
+            ],
+            "correct_option": 1,
+            "explanation": "AddressSanitizer (ASan) instrument compiles code to detect out-of-bounds array access, use-after-free (dangling pointers), and stack/global overflows at runtime."
+        },
+        {
+            "question": "What does ThreadSanitizer (TSan) primarily detect?",
+            "options": [
+                "Threads that are sleeping too long.",
+                "Data races (concurrent unsynchronized memory accesses) at runtime.",
+                "Deadlocks and thread leaks.",
+                "Stack overflows in thread functions."
+            ],
+            "correct_option": 1,
+            "explanation": "ThreadSanitizer (TSan) monitors memory access patterns of all threads at runtime to identify when two threads access the same memory location concurrently without proper synchronization."
+        },
+        {
+            "question": "What happens if a function marked `noexcept` throws an exception at runtime?",
+            "options": [
+                "The exception is caught by the caller's catch block.",
+                "The program immediately terminates via `std::terminate` without complete stack unwinding.",
+                "The compiler replaces the return value with a default object.",
+                "The exception is silently ignored."
+            ],
+            "correct_option": 1,
+            "explanation": "Marking a function `noexcept` promises that it won't leak exceptions. If it does, C++ calls `std::terminate` immediately, bypassing normal exception catch blocks."
+        },
+        {
+            "question": "Which compiler flag promotes all compiler warnings to compilation errors?",
+            "options": [
+                "`-Wall`",
+                "`-Werror` (or `/WX` on MSVC)",
+                "`-Wextra`",
+                "`-O3`"
+            ],
+            "correct_option": 1,
+            "explanation": "` -Werror` (GCC/Clang) and `/WX` (MSVC) treat all warnings as compilation errors, forcing developers to resolve warnings before compilation succeeds."
+        },
+        {
+            "question": "What is the risk of using runtime assertions (`assert`) for critical validation check logic in production builds?",
+            "options": [
+                "Assertions are slow to parse at startup.",
+                "Assertions are completely compiled out (ignored) in release builds (`-DNDEBUG` flag), disabling the checks.",
+                "Assertions cause heap fragmentation.",
+                "Assertions cannot be compiled on Linux."
+            ],
+            "correct_option": 1,
+            "explanation": "Standard assertions (`assert`) are active only in debug builds. When building for production/release, the `NDEBUG` macro is defined, disabling all `assert` statements, which can disable critical validations if used incorrectly."
+        },
+        {
+            "question": "How does Undefined Behavior (UB) differ from Implementation-Defined Behavior?",
+            "options": [
+                "UB must trigger a compilation error, whereas implementation-defined behavior does not.",
+                "Implementation-defined behavior must be consistent and documented by the compiler vendor; UB has no rules, and the compiler can generate any arbitrary instruction.",
+                "There is no difference; they are synonyms.",
+                "UB only occurs on older compilers."
+            ],
+            "correct_option": 1,
+            "explanation": "Implementation-defined behavior (like the size of `int`) must be documented and consistent for a compiler. Undefined behavior has no rules: the program might crash, print wrong results, or run fine temporarily."
+        },
+        {
+            "question": "What does a compiler warning about a 'dangling reference' usually indicate?",
+            "options": [
+                "The compiler is cleaning up heap memory.",
+                "A reference points to a variable whose lifetime has ended (like a local variable returned from a function).",
+                "A pointer has been cast to a float.",
+                "A template class has not been instantiated."
+            ],
+            "correct_option": 1,
+            "explanation": "A dangling reference points to destroyed memory. Accessing it is undefined behavior, and compilers warn you when a reference's target object goes out of scope."
+        }
+    ],
+    "performance": [
+        {
+            "question": "What causes false sharing (cache line bouncing) in multithreaded systems?",
+            "options": [
+                "Multiple threads trying to modify the same global atomic variable.",
+                "Two or more threads on different cores modifying independent variables that happen to reside on the same CPU cache line.",
+                "When threads are run on separate physical CPUs.",
+                "Lock contention on a shared mutex."
+            ],
+            "correct_option": 1,
+            "explanation": "CPU caches track memory in blocks called cache lines (typically 64 bytes). If two threads modify separate variables on the same cache line, the cores constantly invalidate each other's cache line copy, causing severe cache line bouncing."
+        },
+        {
+            "question": "How can you prevent false sharing in C++17?",
+            "options": [
+                "Wrap variables inside a `std::mutex`.",
+                "Align variables using `alignas(std::hardware_destructive_interference_size)`.",
+                "Use `std::atomic` variables.",
+                "Compile with `-O3` optimization level."
+            ],
+            "correct_option": 1,
+            "explanation": "C++17 introduced `std::hardware_destructive_interference_size` which specifies the minimum byte alignment needed to prevent variables from sharing the same cache line (usually 64 bytes)."
+        },
+        {
+            "question": "What is the memory size of `struct S { char c; int i; };` on a standard 32/64-bit system?",
+            "options": [
+                "5 bytes (1 byte for char, 4 bytes for int).",
+                "8 bytes, because the compiler adds 3 bytes of padding to align the 4-byte `int` on a 4-byte address boundary.",
+                "12 bytes, due to vptr alignment.",
+                "16 bytes."
+            ],
+            "correct_option": 1,
+            "explanation": "To optimize CPU access, the compiler aligns data types to their natural sizes. A 4-byte integer must start on an address multiple of 4, forcing the insertion of 3 padding bytes after the 1-byte character."
+        },
+        {
+            "question": "Why does returning `std::move(local)` from a function prevent NRVO (Named Return Value Optimization)?",
+            "options": [
+                "It copies the object instead of moving it.",
+                "It casts the local variable to an rvalue reference (xvalue), which matches a move constructor call instead of triggering direct copy elision.",
+                "The compiler does not optimize move-only types.",
+                "It causes a stack overflow."
+            ],
+            "correct_option": 1,
+            "explanation": "Returning a local by value allows the compiler to construct the return value directly in the caller's stack frame (NRVO). Using `std::move(local)` forces the function to return a reference (`T&&`), forcing a move constructor call and preventing NRVO."
+        },
+        {
+            "question": "Does marking a function `inline` guarantee it will be inlined by the compiler?",
+            "options": [
+                "Yes, it is a mandatory instruction to the compiler.",
+                "No, it is only a optimization hint; the compiler makes the final decision based on code size and heuristics.",
+                "No, `inline` is only used to allow defining functions in header files without violating ODR.",
+                "Yes, but only in debug builds."
+            ],
+            "correct_option": 1,
+            "explanation": "`inline` has two meanings: it hints to the compiler to inline code (optional), and it allows the function to be defined in multiple translation units (such as in header files) without violating the One Definition Rule (ODR)."
+        },
+        {
+            "question": "What is the strict aliasing rule in C++?",
+            "options": [
+                "Pointers can only point to objects of the exact same type (ignoring const and signedness). Dereferencing pointers to incompatible types is UB.",
+                "Variables must be named strictly according to their type.",
+                "You cannot point two reference variables to the same object.",
+                "It requires all pointers to be initialized to `nullptr`."
+            ],
+            "correct_option": 0,
+            "explanation": "The strict aliasing rule states that two pointers of incompatible types cannot point to the same memory location, allowing the compiler to assume that writing to one does not modify the other, enabling optimization."
+        },
+        {
+            "question": "What is the purpose of alignment in C++ memory management?",
+            "options": [
+                "To sort pointers in alphabetical order.",
+                "To ensure objects are allocated at memory addresses that are multiples of their alignment size, enabling fast CPU fetches.",
+                "To match the type boundaries of template classes.",
+                "To prevent memory leaks."
+            ],
+            "correct_option": 1,
+            "explanation": "CPUs fetch memory in aligned blocks. If data is unaligned, a single read might span two cache lines, requiring two memory fetches instead of one. Alignment guarantees optimal fetch speeds."
+        },
+        {
+            "question": "When is Return Value Optimization (RVO) guaranteed by the standard (C++17 onwards)?",
+            "options": [
+                "When a function returns a named local variable.",
+                "When a function returns a temporary prvalue of the same type as the return type.",
+                "Only when compiler optimization is set to `-O2` or higher.",
+                "When returning pointers to heap objects."
+            ],
+            "correct_option": 1,
+            "explanation": "Since C++17, RVO is guaranteed (not just an optimization pass) when returning a prvalue (temporary object). The compiler is required to construct the object directly in the target storage, bypassing copies/moves."
+        },
+        {
+            "question": "What is the penalty of unaligned memory access on modern CPU architectures?",
+            "options": [
+                "It causes a compilation warning.",
+                "It can cause slower execution speed due to double cache fetches, or trigger a hardware alignment fault crash on strict architectures.",
+                "It increases the binary file size.",
+                "It disables multi-core execution."
+            ],
+            "correct_option": 1,
+            "explanation": "Some architectures (like x86) handle unaligned reads with a performance penalty by doing two fetches. Others (like ARM) might trigger a hardware misaligned-memory-access exception, crashing the program."
+        },
+        {
+            "question": "Why is the loop condition `for (int i = 0; i < vec.size(); ++i)` sometimes inefficient compared to caching the size?",
+            "options": [
+                "Because `size()` has \(O(n)\) complexity.",
+                "If `size()` is not inline, or the compiler cannot verify that the vector size is constant (e.g. if loop body writes to pointers), it must call `size()` every iteration.",
+                "Because `size()` allocates memory on the stack.",
+                "There is no difference; compilers always optimize this."
+            ],
+            "correct_option": 1,
+            "explanation": "If the compiler cannot prove that the vector size doesn't change during the loop (for example, if you write to raw pointers in the loop), it is forced to re-call `size()` on every iteration, wasting CPU cycles."
+        }
+    ],
+    "stl": [
+        {
+            "question": "What action invalidates all active iterators of a `std::vector`?",
+            "options": [
+                "Modifying an element inside the vector.",
+                "An insertion that causes the vector to exceed its current `capacity()`, triggering memory reallocation.",
+                "Calling `.reserve()` with a value smaller than the current capacity.",
+                "Iterating through the vector in reverse order."
+            ],
+            "correct_option": 1,
+            "explanation": "If a vector grows beyond its `capacity()`, it allocates a new larger heap block, copies elements over, and frees the old block. All pointers, references, and iterators pointing to the old memory become invalid (dangling)."
+        },
+        {
+            "question": "What is the average search complexity of `std::unordered_map` vs `std::map`?",
+            "options": [
+                "\(O(n)\) vs \(O(1)\)",
+                "\(O(1)\) (hash table lookup) vs \(O(\log n)\) (balanced binary tree traversal).",
+                "\(O(\log n)\) vs \(O(n \log n)\)",
+                "They have the same complexity."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::unordered_map` uses a hash table, providing \(O(1)\) average search complexity. `std::map` uses a red-black tree, requiring \(O(\log n)\) comparisons."
+        },
+        {
+            "question": "Why is `std::vector<bool>` space-optimized, and what is its major drawback?",
+            "options": [
+                "It uses compression algorithms, making it slow.",
+                "It packs elements as single bits (1 bit per bool), but since bits are not addressable, it cannot return a standard `bool&` reference, returning a proxy instead.",
+                "It cannot be resized after construction.",
+                "It is a compile-time constant array."
+            ],
+            "correct_option": 1,
+            "explanation": "To save space, `std::vector<bool>` stores 8 booleans per byte. Because C++ cannot reference sub-byte memory bits, `operator[]` returns a proxy object (`std::vector<bool>::reference`) instead of `bool&`, which can break generic code."
+        },
+        {
+            "question": "Why does calling `std::sort` on a `std::list` result in a compilation error?",
+            "options": [
+                "`std::list` cannot be sorted.",
+                "`std::sort` requires random-access iterators; `std::list` only provides bidirectional iterators. You must use `std::list::sort()` instead.",
+                "`std::list` elements are constant.",
+                "You must include `<list_sort>`."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::sort` uses algorithms that require random-access iterators (like `std::vector` or arrays). `std::list` is a doubly linked list and only supports bidirectional traversal, so you must use the container-specific member `.sort()`."
+        },
+        {
+            "question": "What is the primary danger of using `std::string_view` in `{subtopic}`?",
+            "options": [
+                "It copies strings, reducing performance.",
+                "It is a non-owning view; if the underlying string object is destroyed (e.g. temporary string), the `string_view` becomes a dangling pointer.",
+                "It cannot be converted to `std::string`.",
+                "It requires compile-time evaluation."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::string_view` stores a pointer and a length. It does not own the characters. If the owner string is modified, moved, or destroyed, the `string_view` refers to invalid memory."
+        },
+        {
+            "question": "Does calling the `std::remove` algorithm actually erase elements and resize a container?",
+            "options": [
+                "Yes, it removes elements and changes the container size.",
+                "No, it only shifts the elements to the front and returns an iterator to the new logical end; you must call the container's `.erase()` to resize it (Erase-Remove idiom).",
+                "No, it is a compile-time check only.",
+                "Yes, but only for `std::list`."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::remove` operates on iterators and cannot access the container's size properties. It moves elements to the front, leaving the container size unchanged. You must call `.erase(new_end, end)` to delete the trailing elements."
+        },
+        {
+            "question": "What does C++23 `std::expected<T, E>` represent?",
+            "options": [
+                "A template class that estimates execution time.",
+                "A vocabulary type that holds either a success value of type `T` or an error value of type `E` (unexpected), replacing exceptions for expected errors.",
+                "A replacement for `std::future`.",
+                "An optimizer flag."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::expected` provides functional error handling. It returns either the success result or the error payload in a single type-safe object, avoiding exception-handling overhead for predictable failures."
+        },
+        {
+            "question": "What is a `std::span` introduced in C++20?",
+            "options": [
+                "A wrapper that runs objects across multiple CPU cores.",
+                "A non-owning view over a contiguous sequence of elements (like an array or vector), storing a pointer and a size.",
+                "A compiler instruction for thread interference size.",
+                "A class that measures time spans."
+            ],
+            "correct_option": 1,
+            "explanation": "`std::span` is a lightweight, non-owning view that provides safe, contiguous access to arrays, vectors, or buffers without copying data or depending on specific container types."
+        },
+        {
+            "question": "What happens if a lambda captures a local variable by reference `[&]`, and is executed after the variable goes out of scope?",
+            "options": [
+                "The lambda copies the variable before destruction.",
+                "Accessing the reference triggers Undefined Behavior because it points to a destroyed stack variable.",
+                "The compiler extends the variable's lifetime automatically.",
+                "It is a compile-time error."
+            ],
+            "correct_option": 1,
+            "explanation": "Capturing by reference `[&]` does not extend the lifetime of stack variables. If the lambda executes after the variable goes out of scope, it is a dangling reference and accessing it is undefined behavior."
+        },
+        {
+            "question": "What category is returned by the C++20 spaceship operator `<=>` for floating-point comparisons?",
+            "options": [
+                "`std::strong_ordering`",
+                "`std::weak_ordering`",
+                "`std::partial_ordering` (because `NaN` is unordered)",
+                "`std::float_ordering`"
+            ],
+            "correct_option": 2,
+            "explanation": "Floating-point numbers can represent `NaN` (Not a Number). Since `NaN` cannot be compared to other numbers (`NaN < 1` is false, and `NaN > 1` is false), comparisons are partially ordered, returning `std::partial_ordering`."
+        }
+    ]
+}
+
+def get_category_for_title(title):
+    title_l = title.lower()
+    if "compilation" in title_l or "linkage" in title_l or "namespace" in title_l or "preprocessor" in title_l or "odr" in title_l:
+        return "compilation"
+    elif "cast" in title_l or "const" in title_l or "value" in title_l or "enum" in title_l or "overload" in title_l or "ub" in title_l:
+        return "types"
+    elif "virtual" in title_l or "inheritance" in title_l or "slicing" in title_l or "polymorphism" in title_l:
+        return "oop"
+    elif "pointer" in title_l or "allocat" in title_l or "reference" in title_l or "decay" in title_l or "raii" in title_l:
+        return "memory"
+    elif "template" in title_l or "sfinae" in title_l or "variadic" in title_l or "meta" in title_l or "concept" in title_l:
+        return "templates"
+    elif "thread" in title_l or "mutex" in title_l or "concurrency" in title_l or "atomic" in title_l or "lock" in title_l or "memory model" in title_l:
+        return "concurrency"
+    elif "exception" in title_l or "safety" in title_l or "assert" in title_l or "sanitizer" in title_l or "warn" in title_l:
+        return "diagnostics"
+    elif "cache" in title_l or "alignment" in title_l or "inline" in title_l or "optimization" in title_l or "rvo" in title_l:
+        return "performance"
+    else:
+        return "stl"
+
 def st(title, explanation, examples, pitfalls, tips, questions):
-    """Helper to create a subtopic dict."""
+    """Helper to create a subtopic dict with dynamic analogies and MCQs."""
+    # Analogy search
+    analogy = None
+    for k, v in ANALOGIES.items():
+        if k.lower() in title.lower():
+            analogy = v
+            break
+            
+    full_explanation = explanation
+    if analogy:
+        full_explanation += "\n\n### Unforgettable Analogy / Deep Dive\n" + analogy
+        
+    # MCQ search and parameterization
+    cat = get_category_for_title(title)
+    mcq_templates = CATEGORIES_MCQ.get(cat, CATEGORIES_MCQ["stl"])
+    mcqs_list = []
+    for t in mcq_templates:
+        q_text = t["question"].replace("{subtopic}", title)
+        ex_text = t["explanation"].replace("{subtopic}", title)
+        mcqs_list.append({
+            "question": q_text,
+            "options": t["options"],
+            "correct_option": t["correct_option"],
+            "explanation": ex_text
+        })
+        
     return {
         "title": title,
-        "explanation": explanation,
+        "explanation": full_explanation,
         "examples": [{"title": t, "code": c, "explanation": e} for t, c, e in examples],
         "pitfalls": pitfalls,
         "tips_to_remember": tips,
-        "questions": [{"question": q, "answer": a} for q, a in questions]
+        "questions": [{"question": q, "answer": a} for q, a in questions],
+        "mcqs": mcqs_list
     }
+
+
 
 def day1():
     return {
@@ -893,6 +2034,34 @@ kb = {
         day13(), day14(), day15(), day16(), day17_revision()
     ]
 }
+
+# Post-process code examples to Allman brace style
+import re
+block_start_regex = re.compile(
+    r'^([ \t]*)(.*(?:\)|const|noexcept|override|final|else|try|do|struct\s+[a-zA-Z0-9_]+|class\s+[a-zA-Z0-9_]+|namespace\s+[a-zA-Z0-9_]+|enum\s+(?:class\s+)?[a-zA-Z0-9_]+))\s*\{\s*(\/\/.*)?\s*$'
+)
+
+def to_allman_style(code):
+    lines = code.split('\n')
+    fmt = []
+    for line in lines:
+        m = block_start_regex.match(line)
+        if m:
+            indent = m.group(1)
+            stmt = m.group(2)
+            comm = m.group(3) or ''
+            stmt_line = f"{stmt} {comm}".strip()
+            fmt.append(f"{indent}{stmt_line}")
+            fmt.append(f"{indent}{{")
+        else:
+            fmt.append(line)
+    return '\n'.join(fmt)
+
+for day in kb["days"]:
+    for sub in day.get("subtopics", []):
+        for ex in sub.get("examples", []):
+            if "code" in ex:
+                ex["code"] = to_allman_style(ex["code"])
 
 output_path = os.path.join("C:\\GitHub\\Focus", "cpp_knowledgebase.json")
 with open(output_path, 'w', encoding='utf-8') as f:

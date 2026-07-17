@@ -272,7 +272,7 @@ function renderStandardDay(day) {
         // Build Explanation
         let explanationHtml = `
             <div class="subtopic-explanation">
-                ${subtopic.explanation.split('\n\n').map(p => `<p>${escapeHtmlText(p).replace(/\n/g, '<br>')}</p>`).join('')}
+                ${formatText(subtopic.explanation)}
             </div>
         `;
         
@@ -292,7 +292,7 @@ function renderStandardDay(day) {
                         </div>
                         <pre><code id="${codeId}">${highlightCpp(ex.code)}</code></pre>
                     </div>
-                    ${ex.explanation ? `<div class="code-explanation">${escapeHtmlText(ex.explanation)}</div>` : ''}
+                    ${ex.explanation ? `<div class="code-explanation">${formatText(ex.explanation)}</div>` : ''}
                 `;
             });
             codeHtml += '</div>';
@@ -313,7 +313,7 @@ function renderStandardDay(day) {
                             <i class="fa-solid fa-circle-exclamation"></i> Common Pitfalls
                         </div>
                         <ul class="callout-list">
-                            ${subtopic.pitfalls.map(p => `<li>${escapeHtmlText(p)}</li>`).join('')}
+                            ${subtopic.pitfalls.map(p => `<li>${formatText(p)}</li>`).join('')}
                         </ul>
                     </div>
                 `;
@@ -326,7 +326,7 @@ function renderStandardDay(day) {
                             <i class="fa-solid fa-lightbulb"></i> Tips to Remember
                         </div>
                         <ul class="callout-list">
-                            ${subtopic.tips_to_remember.map(t => `<li>${escapeHtmlText(t)}</li>`).join('')}
+                            ${subtopic.tips_to_remember.map(t => `<li>${formatText(t)}</li>`).join('')}
                         </ul>
                     </div>
                 `;
@@ -343,12 +343,12 @@ function renderStandardDay(day) {
                 questionsHtml += `
                     <div class="question-accordion">
                         <div class="question-header" onclick="toggleAccordion(this)">
-                            <span class="question-text">${escapeHtmlText(q.question)}</span>
+                            <span class="question-text">${formatText(q.question)}</span>
                             <span class="question-arrow"><i class="fa-solid fa-chevron-down"></i></span>
                         </div>
                         <div class="question-answer-panel">
                             <div class="question-answer-content">
-                                ${escapeHtmlText(q.answer).replace(/\n/g, '<br>')}
+                                ${formatText(q.answer).replace(/\n/g, '<br>')}
                             </div>
                         </div>
                     </div>
@@ -356,9 +356,41 @@ function renderStandardDay(day) {
             });
             questionsHtml += '</div>';
         }
+
+        // Build Interactive MCQs
+        let mcqsHtml = '';
+        if (subtopic.mcqs && subtopic.mcqs.length > 0) {
+            mcqsHtml += '<div class="quiz-section"><span class="quiz-section-title">Interactive Practice Quiz (10 Tricky MCQs)</span>';
+            subtopic.mcqs.forEach((mcq, mcqIdx) => {
+                const explanationId = `mcq_ex_${day.day}_${index}_${mcqIdx}`;
+                mcqsHtml += `
+                    <div class="mcq-card" id="mcq_card_${day.day}_${index}_${mcqIdx}">
+                        <div class="mcq-question">
+                            <span class="mcq-num">Q${mcqIdx + 1}</span>
+                            <span class="mcq-text">${formatText(mcq.question)}</span>
+                        </div>
+                        <div class="mcq-options">
+                            ${mcq.options.map((opt, optIdx) => `
+                                <div class="mcq-option" onclick="checkMcqAnswer(this, ${optIdx}, ${mcq.correct_option}, '${explanationId}')">
+                                    <span class="option-letter">${String.fromCharCode(65 + optIdx)}</span>
+                                    <span class="option-text">${escapeHtmlText(opt)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="mcq-explanation" id="${explanationId}" style="display: none;">
+                            <div class="mcq-explanation-title">
+                                <i class="fa-solid fa-circle-info"></i> Learning Insight
+                            </div>
+                            <div class="mcq-explanation-text">${formatText(mcq.explanation)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            mcqsHtml += '</div>';
+        }
         
         // Assemble Card
-        subtopicCard.innerHTML = headerHtml + explanationHtml + codeHtml + calloutsHtml + questionsHtml;
+        subtopicCard.innerHTML = headerHtml + explanationHtml + codeHtml + calloutsHtml + questionsHtml + mcqsHtml;
         subtopicsContainer.appendChild(subtopicCard);
     });
 }
@@ -387,7 +419,7 @@ function renderDay17Revision(day) {
                                 <td style="padding: 12px 16px; font-weight: 600;">${ref.topic}</td>
                                 <td style="padding: 12px 16px; color: var(--text-secondary);">
                                     <ul style="padding-left: 16px;">
-                                        ${ref.key_points.map(pt => `<li style="margin-bottom: 4px;">${escapeHtmlText(pt)}</li>`).join('')}
+                                        ${ref.key_points.map(pt => `<li style="margin-bottom: 4px;">${formatText(pt)}</li>`).join('')}
                                     </ul>
                                 </td>
                             </tr>
@@ -405,7 +437,7 @@ function renderDay17Revision(day) {
                 <i class="fa-solid fa-circle-check"></i> Essential C++ Cheat Sheet Rules
             </div>
             <ul class="callout-list" style="font-size: 14.5px;">
-                ${day.cheat_sheet.map(item => `<li>${escapeHtmlText(item)}</li>`).join('')}
+                ${day.cheat_sheet.map(item => `<li>${formatText(item)}</li>`).join('')}
             </ul>
         </div>
     `;
@@ -420,7 +452,7 @@ function renderDay17Revision(day) {
                     <div class="question-accordion">
                         <div class="question-header" onclick="toggleAccordion(this)">
                             <span class="question-text" style="font-weight: 700; color: var(--text-primary);">
-                                ${escapeHtmlText(q.question)}
+                                ${formatText(q.question)}
                                 <span style="display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); margin-top: 4px;">
                                     Topics: ${q.topics_covered.join(', ')}
                                 </span>
@@ -429,7 +461,7 @@ function renderDay17Revision(day) {
                         </div>
                         <div class="question-answer-panel">
                             <div class="question-answer-content">
-                                ${escapeHtmlText(q.answer).replace(/\n/g, '<br>')}
+                                ${formatText(q.answer).replace(/\n/g, '<br>')}
                             </div>
                         </div>
                     </div>
@@ -795,3 +827,106 @@ function escapeHtmlText(text) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
 }
+
+function formatText(text) {
+    if (!text) return '';
+    
+    // First, escape HTML characters
+    let html = escapeHtmlText(text);
+    
+    // Convert backticks `code` into <code class="inline-code">code</code>
+    html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    
+    // Convert bold **text** to <strong>text</strong>
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // If the string is single-line, return immediately without paragraph wrapping
+    if (!text.includes('\n')) {
+        return html;
+    }
+    
+    const lines = html.split('\n');
+    let result = '';
+    let insideList = false;
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (line.startsWith('### ')) {
+            if (insideList) {
+                result += '</ul>';
+                insideList = false;
+            }
+            const headingText = line.substring(4);
+            result += `<h4 class="explanation-subheading">${headingText}</h4>`;
+        } else if (line.startsWith('- ') || line.startsWith('* ')) {
+            if (!insideList) {
+                result += '<ul class="explanation-list">';
+                insideList = true;
+            }
+            const itemText = line.substring(2);
+            result += `<li>${itemText}</li>`;
+        } else {
+            if (insideList && line === '') {
+                result += '</ul>';
+                insideList = false;
+            }
+            
+            if (line !== '') {
+                result += `<p class="explanation-paragraph">${line}</p>`;
+            }
+        }
+    }
+    
+    if (insideList) {
+        result += '</ul>';
+    }
+    
+    return result;
+}
+
+function checkMcqAnswer(selectedOptionElement, selectedIdx, correctIdx, explanationId) {
+    const optionsContainer = selectedOptionElement.parentElement;
+    
+    // If already answered, do nothing
+    if (optionsContainer.classList.contains('answered')) {
+        return;
+    }
+    
+    // Mark the container as answered to lock further inputs
+    optionsContainer.classList.add('answered');
+    
+    const options = optionsContainer.querySelectorAll('.mcq-option');
+    options.forEach((opt, idx) => {
+        opt.classList.add('disabled');
+        if (idx === correctIdx) {
+            opt.classList.add('correct');
+            // Add a checkmark icon to the correct option
+            const icon = document.createElement('span');
+            icon.className = 'option-icon-indicator correct';
+            icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+            opt.appendChild(icon);
+        } else if (idx === selectedIdx) {
+            opt.classList.add('incorrect');
+            // Add a cross icon to the selected incorrect option
+            const icon = document.createElement('span');
+            icon.className = 'option-icon-indicator incorrect';
+            icon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+            opt.appendChild(icon);
+        }
+    });
+    
+    // Reveal the explanation card
+    const expPanel = document.getElementById(explanationId);
+    if (expPanel) {
+        expPanel.style.display = 'block';
+    }
+    
+    // Trigger toast notification
+    if (selectedIdx === correctIdx) {
+        showToast('Correct! Great job.');
+    } else {
+        showToast('Incorrect. Study the learning insight below!');
+    }
+}
+
